@@ -625,9 +625,9 @@ void MX_FDCAN1_Init(void)
  80006a2:	4b2e      	ldr	r3, [pc, #184]	@ (800075c <MX_FDCAN1_Init+0xc4>)
  80006a4:	f44f 7280 	mov.w	r2, #256	@ 0x100
  80006a8:	609a      	str	r2, [r3, #8]
-  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan1.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
  80006aa:	4b2c      	ldr	r3, [pc, #176]	@ (800075c <MX_FDCAN1_Init+0xc4>)
- 80006ac:	2200      	movs	r2, #0
+ 80006ac:	2203      	movs	r2, #3
  80006ae:	60da      	str	r2, [r3, #12]
   hfdcan1.Init.AutoRetransmission = DISABLE;
  80006b0:	4b2a      	ldr	r3, [pc, #168]	@ (800075c <MX_FDCAN1_Init+0xc4>)
@@ -769,9 +769,9 @@ void MX_FDCAN2_Init(void)
  800076e:	4b2e      	ldr	r3, [pc, #184]	@ (8000828 <MX_FDCAN2_Init+0xc4>)
  8000770:	f44f 7280 	mov.w	r2, #256	@ 0x100
  8000774:	609a      	str	r2, [r3, #8]
-  hfdcan2.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan2.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
  8000776:	4b2c      	ldr	r3, [pc, #176]	@ (8000828 <MX_FDCAN2_Init+0xc4>)
- 8000778:	2200      	movs	r2, #0
+ 8000778:	2203      	movs	r2, #3
  800077a:	60da      	str	r2, [r3, #12]
   hfdcan2.Init.AutoRetransmission = DISABLE;
  800077c:	4b2a      	ldr	r3, [pc, #168]	@ (8000828 <MX_FDCAN2_Init+0xc4>)
@@ -1383,7 +1383,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
  8000c08:	f000 f998 	bl	8000f3c <Error_Handler>
     }
 
-	sprintf ((char *)TxData2, "FDCAN2TX %d", indx++);
+	sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
  8000c0c:	4b0e      	ldr	r3, [pc, #56]	@ (8000c48 <HAL_FDCAN_RxFifo1Callback+0x70>)
  8000c0e:	681b      	ldr	r3, [r3, #0]
  8000c10:	1c5a      	adds	r2, r3, #1
@@ -1393,7 +1393,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
  8000c18:	490c      	ldr	r1, [pc, #48]	@ (8000c4c <HAL_FDCAN_RxFifo1Callback+0x74>)
  8000c1a:	480d      	ldr	r0, [pc, #52]	@ (8000c50 <HAL_FDCAN_RxFifo1Callback+0x78>)
  8000c1c:	f008 fe08 	bl	8009830 <siprintf>
-	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader2, TxData2)!= HAL_OK) {
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1)!= HAL_OK) {
  8000c20:	4a0b      	ldr	r2, [pc, #44]	@ (8000c50 <HAL_FDCAN_RxFifo1Callback+0x78>)
  8000c22:	490c      	ldr	r1, [pc, #48]	@ (8000c54 <HAL_FDCAN_RxFifo1Callback+0x7c>)
  8000c24:	480c      	ldr	r0, [pc, #48]	@ (8000c58 <HAL_FDCAN_RxFifo1Callback+0x80>)
@@ -1415,9 +1415,9 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
  8000c44:	24000350 	.word	0x24000350
  8000c48:	240002bc 	.word	0x240002bc
  8000c4c:	0800a188 	.word	0x0800a188
- 8000c50:	24000378 	.word	0x24000378
- 8000c54:	2400032c 	.word	0x2400032c
- 8000c58:	24000204 	.word	0x24000204
+ 8000c50:	24000314 	.word	0x24000314
+ 8000c54:	240002c8 	.word	0x240002c8
+ 8000c58:	24000164 	.word	0x24000164
 
 08000c5c <main>:
 /**
@@ -1682,7 +1682,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
+	  sprintf ((char *)TxData2, "FDCAN2TX %d", indx++);
  8000dba:	4b10      	ldr	r3, [pc, #64]	@ (8000dfc <main+0x1a0>)
  8000dbc:	681b      	ldr	r3, [r3, #0]
  8000dbe:	1c5a      	adds	r2, r3, #1
@@ -1692,10 +1692,10 @@ int main(void)
  8000dc6:	490e      	ldr	r1, [pc, #56]	@ (8000e00 <main+0x1a4>)
  8000dc8:	480e      	ldr	r0, [pc, #56]	@ (8000e04 <main+0x1a8>)
  8000dca:	f008 fd31 	bl	8009830 <siprintf>
-	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1)!= HAL_OK) {
+	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader2, TxData2)!= HAL_OK) {
  8000dce:	4a0d      	ldr	r2, [pc, #52]	@ (8000e04 <main+0x1a8>)
- 8000dd0:	4908      	ldr	r1, [pc, #32]	@ (8000df4 <main+0x198>)
- 8000dd2:	4806      	ldr	r0, [pc, #24]	@ (8000dec <main+0x190>)
+ 8000dd0:	4909      	ldr	r1, [pc, #36]	@ (8000df8 <main+0x19c>)
+ 8000dd2:	4807      	ldr	r0, [pc, #28]	@ (8000df0 <main+0x194>)
  8000dd4:	f004 f8d1 	bl	8004f7a <HAL_FDCAN_AddMessageToTxFifoQ>
  8000dd8:	4603      	mov	r3, r0
  8000dda:	2b00      	cmp	r3, #0
@@ -1706,7 +1706,7 @@ int main(void)
 	  HAL_Delay (1000);
  8000de2:	f44f 707a 	mov.w	r0, #1000	@ 0x3e8
  8000de6:	f000 fabd 	bl	8001364 <HAL_Delay>
-	  sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
+	  sprintf ((char *)TxData2, "FDCAN2TX %d", indx++);
  8000dea:	e7e6      	b.n	8000dba <main+0x15e>
  8000dec:	24000164 	.word	0x24000164
  8000df0:	24000204 	.word	0x24000204
@@ -1714,7 +1714,7 @@ int main(void)
  8000df8:	2400032c 	.word	0x2400032c
  8000dfc:	240002bc 	.word	0x240002bc
  8000e00:	0800a194 	.word	0x0800a194
- 8000e04:	24000314 	.word	0x24000314
+ 8000e04:	24000378 	.word	0x24000378
 
 08000e08 <SystemClock_Config>:
 /**

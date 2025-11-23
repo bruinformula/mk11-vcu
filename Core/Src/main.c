@@ -104,8 +104,8 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
     	Error_Handler();
     }
 
-	sprintf ((char *)TxData2, "FDCAN2TX %d", indx++);
-	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader2, TxData2)!= HAL_OK) {
+	sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1)!= HAL_OK) {
 		Error_Handler();
 	}
   }
@@ -235,8 +235,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
-	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1)!= HAL_OK) {
+	  sprintf ((char *)TxData2, "FDCAN2TX %d", indx++);
+	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader2, TxData2)!= HAL_OK) {
 		  Error_Handler();
 	  }
 	  HAL_Delay (1000);

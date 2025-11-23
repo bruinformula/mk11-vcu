@@ -54,18 +54,17 @@ int debug2_cb = 0;
 
 FDCAN_TxHeaderTypeDef   TxHeader1;
 FDCAN_RxHeaderTypeDef   RxHeader1;
-uint8_t               TxData1[12];
-uint8_t               RxData1[12];
+uint8_t               TxData1[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+uint8_t               RxData1[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
 
 FDCAN_TxHeaderTypeDef   TxHeader2;
 FDCAN_RxHeaderTypeDef   RxHeader2;
-uint8_t               TxData2[12];
-uint8_t               RxData2[12];
+uint8_t               TxData2[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+uint8_t               RxData2[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
 
@@ -86,10 +85,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
   {
     /* Retreive Rx messages from RX FIFO0 */
-    if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader1, RxData1) != HAL_OK) {
-    /* Reception Error */
-    	Error_Handler();
-    }
+	if (hfdcan == &hfdcan1) {
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader1, RxData1) != HAL_OK) {
+		/* Reception Error */
+			Error_Handler();
+		}
+	}
   }
 }
 
@@ -111,6 +112,11 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	}
   }
 }
+
+/** DEBUG VARIABLES **/
+uint8_t txErrorCnt = 0;
+uint32_t ecr1 = 0;
+
 /* USER CODE END 0 */
 
 /**
@@ -138,9 +144,6 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* Configure the peripherals common clocks */
-  PeriphCommonClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
@@ -183,7 +186,14 @@ int main(void)
     /* Filter configuration Error */
     Error_Handler();
   }
-
+  // Configure FDCAN2 Global Filter - Accept All
+  if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan2,
+                                    FDCAN_ACCEPT_IN_RX_FIFO1,  // Accept ALL standard IDs to FIFO1
+                                    FDCAN_REJECT,              // Reject extended IDs (not used)
+                                    DISABLE,
+                                    DISABLE) != HAL_OK) {
+    Error_Handler();
+  }
 
   // Start FDCAN1
   if(HAL_FDCAN_Start(&hfdcan1)!= HAL_OK) {
@@ -212,23 +222,48 @@ int main(void)
   TxHeader1.Identifier = 0x11;
   TxHeader1.IdType = FDCAN_STANDARD_ID;
   TxHeader1.TxFrameType = FDCAN_DATA_FRAME;
-  TxHeader1.DataLength = FDCAN_DLC_BYTES_12;
+  TxHeader1.DataLength = FDCAN_DLC_BYTES_8;
   TxHeader1.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
   TxHeader1.BitRateSwitch = FDCAN_BRS_OFF;
-  TxHeader1.FDFormat = FDCAN_FD_CAN;
-  TxHeader1.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+  TxHeader1.FDFormat = FDCAN_CLASSIC_CAN;
+  TxHeader1.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
   TxHeader1.MessageMarker = 0;
 
   // Configure TX Header for FDCAN2
   TxHeader2.Identifier = 0x22;
   TxHeader2.IdType = FDCAN_STANDARD_ID;
   TxHeader2.TxFrameType = FDCAN_DATA_FRAME;
-  TxHeader2.DataLength = FDCAN_DLC_BYTES_12;
+  TxHeader2.DataLength = FDCAN_DLC_BYTES_8;
   TxHeader2.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
   TxHeader2.BitRateSwitch = FDCAN_BRS_OFF;
-  TxHeader2.FDFormat = FDCAN_FD_CAN;
-  TxHeader2.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+  TxHeader2.FDFormat = FDCAN_CLASSIC_CAN;
+  TxHeader2.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
   TxHeader2.MessageMarker = 0;
+
+//
+//  // Initialize RX Header for FDCAN1 (optional - will be overwritten by GetRxMessage)
+//   RxHeader1.Identifier = 0x11;
+//   RxHeader1.IdType = FDCAN_STANDARD_ID;
+//   RxHeader1.RxFrameType = FDCAN_DATA_FRAME;
+//   RxHeader1.DataLength = FDCAN_DLC_BYTES_8;
+//   RxHeader1.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+//   RxHeader1.BitRateSwitch = FDCAN_BRS_OFF;
+//   RxHeader1.FDFormat = FDCAN_CLASSIC_CAN;
+//   RxHeader1.RxTimestamp = 0;
+//   RxHeader1.FilterIndex = 0;
+//   RxHeader1.IsFilterMatchingFrame = 0;
+//
+//   // Initialize RX Header for FDCAN2 (optional - will be overwritten by GetRxMessage)
+//   RxHeader2.Identifier = 0x22;
+//   RxHeader2.IdType = FDCAN_STANDARD_ID;
+//   RxHeader2.RxFrameType = FDCAN_DATA_FRAME;
+//   RxHeader2.DataLength = FDCAN_DLC_BYTES_8;
+//   RxHeader2.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+//   RxHeader2.BitRateSwitch = FDCAN_BRS_OFF;
+//   RxHeader2.FDFormat = FDCAN_CLASSIC_CAN;
+//   RxHeader2.RxTimestamp = 0;
+//   RxHeader2.FilterIndex = 0;
+//   RxHeader2.IsFilterMatchingFrame = 0;
 
 //  HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
 //  HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
@@ -239,11 +274,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
+	  //sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
 	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1)!= HAL_OK) {
 		  Error_Handler();
 	  }
 	  HAL_Delay (1000);
+	  ecr1 = hfdcan1.Instance->ECR;
+	  txErrorCnt = ecr1 & 0xFF;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -266,25 +303,26 @@ void SystemClock_Config(void)
 
   /** Configure the main internal regulator output voltage
   */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_DIV1;
+  RCC_OscInitStruct.HSICalibrationValue = 64;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 2;
-  RCC_OscInitStruct.PLL.PLLN = 59;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 12;
   RCC_OscInitStruct.PLL.PLLP = 1;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
-  RCC_OscInitStruct.PLL.PLLFRACN = 1536;
+  RCC_OscInitStruct.PLL.PLLFRACN = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -297,44 +335,13 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Enables the Clock Security System
-  */
-  HAL_RCC_EnableCSS();
-}
-
-/**
-  * @brief Peripherals Common Clock Configuration
-  * @retval None
-  */
-void PeriphCommonClock_Config(void)
-{
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-
-  /** Initializes the peripherals clock
-  */
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_FDCAN;
-  PeriphClkInitStruct.PLL2.PLL2M = 1;
-  PeriphClkInitStruct.PLL2.PLL2N = 12;
-  PeriphClkInitStruct.PLL2.PLL2P = 2;
-  PeriphClkInitStruct.PLL2.PLL2Q = 2;
-  PeriphClkInitStruct.PLL2.PLL2R = 2;
-  PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_3;
-  PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
-  PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
-  PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL2;
-  PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL2;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }

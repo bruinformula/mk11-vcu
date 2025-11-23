@@ -57,6 +57,44 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BSE_3V3_Pin GPIO_PIN_8
+#define BSE_3V3_GPIO_Port GPIOF
+#define APPS2_3V3_Pin GPIO_PIN_10
+#define APPS2_3V3_GPIO_Port GPIOF
+#define APPS1_2V4_Pin GPIO_PIN_2
+#define APPS1_2V4_GPIO_Port GPIOC
+#define GPIO_PWM_1_Pin GPIO_PIN_0
+#define GPIO_PWM_1_GPIO_Port GPIOA
+#define GPIO_PWM_2_Pin GPIO_PIN_1
+#define GPIO_PWM_2_GPIO_Port GPIOA
+#define GPIO_PWM_3_Pin GPIO_PIN_2
+#define GPIO_PWM_3_GPIO_Port GPIOA
+#define BRAKE_LIGHT_3V3_Pin GPIO_PIN_13
+#define BRAKE_LIGHT_3V3_GPIO_Port GPIOF
+#define BUTTON_1_SIG_Pin GPIO_PIN_14
+#define BUTTON_1_SIG_GPIO_Port GPIOF
+#define BUTTON_2_SIG_Pin GPIO_PIN_15
+#define BUTTON_2_SIG_GPIO_Port GPIOF
+#define BUTTON_3_SIG_Pin GPIO_PIN_0
+#define BUTTON_3_SIG_GPIO_Port GPIOG
+#define BUTTON_4_SIG_Pin GPIO_PIN_1
+#define BUTTON_4_SIG_GPIO_Port GPIOG
+#define BMS_3V3_Pin GPIO_PIN_7
+#define BMS_3V3_GPIO_Port GPIOE
+#define IMD_3V3_Pin GPIO_PIN_8
+#define IMD_3V3_GPIO_Port GPIOE
+#define BSPD_3V3_Pin GPIO_PIN_9
+#define BSPD_3V3_GPIO_Port GPIOE
+#define GPIO_PWM_4_Pin GPIO_PIN_15
+#define GPIO_PWM_4_GPIO_Port GPIOB
+#define CAN1_L_Pin GPIO_PIN_0
+#define CAN1_L_GPIO_Port GPIOD
+#define CAN1_H_Pin GPIO_PIN_1
+#define CAN1_H_GPIO_Port GPIOD
+#define CAN2_L_Pin GPIO_PIN_5
+#define CAN2_L_GPIO_Port GPIOB
+#define CAN2_H_Pin GPIO_PIN_6
+#define CAN2_H_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

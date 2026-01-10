@@ -116,6 +116,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 /** DEBUG VARIABLES **/
 uint8_t txErrorCnt = 0;
 uint32_t ecr1 = 0;
+volatile uint32_t fdcan1_tx_count = 0;  /* Counter for TX messages sent */
 
 /* USER CODE END 0 */
 
@@ -272,11 +273,16 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  /* ========== FDCAN1 TX TEST TO BMS-MCU ========== */
+  /* Sends message with ID 0x11 every 1 second to mk11-bms-mcu.
+   * Monitor fdcan1_tx_count and txErrorCnt in debugger.
+   * If communication works, BMS-MCU will echo back with ID 0x22.
+   */
   while (1)
   {
 	  //sprintf ((char *)TxData1, "FDCAN1TX %d", indx++);
-	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1)!= HAL_OK) {
-		  Error_Handler();
+	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1) == HAL_OK) {
+		  fdcan1_tx_count++;  /* Increment on successful TX */
 	  }
 	  HAL_Delay (1000);
 	  ecr1 = hfdcan1.Instance->ECR;

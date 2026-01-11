@@ -66,81 +66,77 @@ mk11-vcu                                          mk11-bms-mcu
 3. Build each project: **Project > Build Project** (or Ctrl+B)
 4. Verify no build errors
 
-### Step 2: Flash Both Boards
+### Step 2: Flash and Test (Single Laptop Setup)
 
-1. Connect ST-Link to mk11-vcu
-2. Flash mk11-vcu: **Run > Debug** (or F11)
-3. Stop debugging (but leave board powered)
-4. Connect ST-Link to mk11-bms-mcu
-5. Flash mk11-bms-mcu: **Run > Debug** (or F11)
+This procedure is for when you only have one laptop available for debugging:
 
----
+#### Phase 1: Flash mk11-vcu (Transmitter)
 
-## Testing Procedure
+1. Connect laptop to mk11-vcu via ST-Link
+2. Open mk11-vcu project in STM32CubeIDE
+3. Click **Run > Debug** (F11) to flash the board
+4. Once flashed, **disconnect the debugger/laptop**
+5. Power mk11-vcu from an external power supply (ensure proper voltage)
+6. The mk11-vcu will now run standalone, transmitting CAN message ID `0x11` every 1 second
 
-### Method 1: Debug Both Boards Simultaneously (Recommended)
+#### Phase 2: Monitor mk11-bms-mcu (Receiver)
 
-If you have two ST-Link debuggers or a debug setup that supports multiple targets:
-
-#### A. Start mk11-bms-mcu Debug Session
-
-1. Open mk11-bms-mcu project in STM32CubeIDE
-2. Click **Run > Debug** (F11)
-3. When debugger stops at main(), click **Resume** (F8)
-4. Open **Window > Show View > Expressions**
-5. Add these watch expressions:
+1. **Disconnect** laptop from mk11-vcu
+2. Connect laptop to mk11-bms-mcu via ST-Link
+3. Open mk11-bms-mcu project in STM32CubeIDE
+4. Click **Run > Debug** (F11)
+5. When debugger stops at main(), click **Resume** (F8)
+6. Open **Window > Show View > Expressions**
+7. Add these watch expressions:
    - `fdcan_rx_count`
    - `fdcan_last_rx_id`
    - `fdcan_last_rx_data`
    - `fdcan_rx_error_count`
    - `RxData`
    - `RxHeader`
+8. Monitor the variables to verify CAN reception
 
-#### B. Start mk11-vcu Debug Session
+---
 
-1. Open mk11-vcu project in a second STM32CubeIDE instance (or same instance, different debug config)
-2. Click **Run > Debug** (F11)
-3. When debugger stops at main(), click **Resume** (F8)
-4. Open **Window > Show View > Expressions**
-5. Add these watch expressions:
-   - `fdcan1_tx_count`
-   - `txErrorCnt`
-   - `ecr1`
-   - `debug1_cb` (RX callback counter)
-   - `RxData1` (for echo response)
+## Testing Procedure
 
-### Method 2: Debug One Board at a Time
+### What to Monitor on mk11-bms-mcu
 
-#### A. Flash and Run mk11-bms-mcu (Free Running)
+With the mk11-vcu running standalone on power supply, you'll verify successful FDCAN communication by monitoring these variables on the mk11-bms-mcu:
 
-1. Flash mk11-bms-mcu
-2. Start debug session, then click **Resume**
-3. **Disconnect** debugger but leave board powered
-4. The board will continue running and waiting for CAN messages
+#### Primary Success Indicators
 
-#### B. Debug mk11-vcu
+| Variable | Type | Expected Behavior | What It Means |
+|----------|------|-------------------|---------------|
+| `fdcan_rx_count` | uint32_t | Increments every ~1 second | Successfully receiving messages from VCU |
+| `fdcan_last_rx_id` | uint32_t | Shows `0x11` | Correct message ID received |
+| `fdcan_last_rx_data[8]` | uint8_t[] | Shows `{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}` | Data payload is correct |
+| `fdcan_rx_error_count` | uint32_t | Stays at 0 | No errors in reception or echo transmission |
 
-1. Connect debugger to mk11-vcu
-2. Start debug session
-3. Add watch expressions (see above)
-4. Click **Resume** and observe variables
+#### Step-by-Step Monitoring
+
+1. **Initial State (Before VCU Transmission)**
+   - All counters should be at 0
+   - `fdcan_last_rx_id` will be 0
+   - `fdcan_last_rx_data` will be all zeros
+
+2. **After VCU Starts Transmitting**
+   - Within 1 second, `fdcan_rx_count` should increment to 1
+   - `fdcan_last_rx_id` should change to `0x11`
+   - `fdcan_last_rx_data` should show the pattern `{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}`
+   - Every second thereafter, `fdcan_rx_count` should increment by 1
+
+3. **Continuous Operation**
+   - Let it run for at least 30 seconds
+   - `fdcan_rx_count` should reach approximately 30 or higher
+   - Data pattern should remain consistent
+   - `fdcan_rx_error_count` should never increment
 
 ---
 
 ## Variables to Monitor
 
-### mk11-vcu (Transmitter)
-
-| Variable | Type | Description | Expected Value |
-|----------|------|-------------|----------------|
-| `fdcan1_tx_count` | uint32_t | Number of successful TX messages | Increments every ~1 second |
-| `txErrorCnt` | uint8_t | TX error count from ECR register | Should be 0 |
-| `ecr1` | uint32_t | Error Counter Register value | Should be 0x00000000 |
-| `debug1_cb` | int | RX FIFO0 callback counter | Increments when echo received |
-| `RxData1[8]` | uint8_t[] | Received echo data | Should match TxData1 |
-| `TxData1[8]` | uint8_t[] | Transmitted data | `{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}` |
-
-### mk11-bms-mcu (Receiver)
+### mk11-bms-mcu (Primary Focus)
 
 | Variable | Type | Description | Expected Value |
 |----------|------|-------------|----------------|
@@ -151,81 +147,158 @@ If you have two ST-Link debuggers or a debug setup that supports multiple target
 | `RxData[8]` | uint8_t[] | Copy of received data | Same as fdcan_last_rx_data |
 | `RxHeader.Identifier` | uint32_t | Received message ID | `0x11` |
 
+### mk11-vcu Reference (Not Visible in This Test)
+
+For your reference, here's what's happening on the mk11-vcu side (you won't see these):
+
+| Variable | Type | Description | Expected Value |
+|----------|------|-------------|----------------|
+| `fdcan1_tx_count` | uint32_t | Number of successful TX messages | Increments every ~1 second |
+| `txErrorCnt` | uint8_t | TX error count from ECR register | Should be 0 |
+| `ecr1` | uint32_t | Error Counter Register value | Should be 0x00000000 |
+| `debug1_cb` | int | RX FIFO0 callback counter | Increments when echo received |
+| `RxData1[8]` | uint8_t[] | Received echo data | Should match TxData1 |
+| `TxData1[8]` | uint8_t[] | Transmitted data | `{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}` |
+
 ---
 
 ## Success Criteria
 
-### Transmission Successful If:
+### Test PASSES If (Single Laptop Setup):
 
-1. **mk11-vcu side:**
-   - `fdcan1_tx_count` increments every second
-   - `txErrorCnt` remains 0
-   - `debug1_cb` increments (echo received from BMS)
-   - `RxData1` contains the echoed data
+Observing only the mk11-bms-mcu debug variables:
 
-2. **mk11-bms-mcu side:**
-   - `fdcan_rx_count` increments every second
-   - `fdcan_last_rx_id` equals `0x11`
-   - `fdcan_last_rx_data` contains `{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}`
-   - `fdcan_rx_error_count` remains 0
+✅ **Communication Working:**
+1. `fdcan_rx_count` increments steadily (approximately once per second)
+2. `fdcan_last_rx_id` shows `0x11`
+3. `fdcan_last_rx_data` shows `{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88}`
+4. `fdcan_rx_error_count` remains at 0
 
-### Full Round-Trip Successful If:
+After 30 seconds of operation:
+- `fdcan_rx_count` should be around 30 (±2 messages)
+- Data pattern remains consistent throughout
 
-Both boards show incrementing counters and the VCU receives the echo response (ID `0x22`) from the BMS-MCU.
+### Test FAILS If:
+
+❌ **No Communication:**
+- `fdcan_rx_count` stays at 0 after 5+ seconds
+- See troubleshooting section below
+
+❌ **Intermittent Communication:**
+- `fdcan_rx_count` increments irregularly or stops incrementing
+- Check wiring and termination resistors
+
+❌ **Errors Detected:**
+- `fdcan_rx_error_count` increments
+- Indicates issues with message reception or echo transmission
+
+### What You CAN'T Verify in This Setup:
+
+Since you're not monitoring the mk11-vcu:
+- You won't see if the VCU is successfully transmitting (but if BMS receives, VCU is transmitting)
+- You won't see if the VCU receives the echo response from BMS
+- You won't see the VCU's error counters
+
+**Note:** If you want to verify the full round-trip (echo response), you would need to reconnect the laptop to the mk11-vcu after this test and check if `debug1_cb` is incrementing.
 
 ---
 
 ## Troubleshooting
 
-### Problem: TX Count Increments but RX Count Stays at 0
+### Problem: BMS RX Count Stays at 0 (No Messages Received)
 
-**Possible Causes:**
-1. CAN bus not properly connected (check CANH/CANL wiring)
-2. Missing or incorrect termination resistors
-3. Transceiver not powered or configured incorrectly
-4. Bit timing mismatch between boards
+**Single Laptop Setup - What to Check:**
 
-**Solutions:**
-- Verify physical connections
-- Check transceiver power supply
-- Use oscilloscope to verify CAN signals on CANH/CANL
-- Verify both boards have matching bit timing (500 kbps)
+1. **Is mk11-vcu Actually Running?**
+   - Verify external power supply is connected and correct voltage
+   - Check if VCU board LED indicators show activity
+   - Verify you flashed the latest code to VCU before disconnecting
+   - Consider briefly reconnecting to VCU to verify `fdcan1_tx_count` is incrementing
 
-### Problem: txErrorCnt Increases
+2. **CAN Bus Wiring Issues**
+   - Verify CANH connected to CANH, CANL to CANL
+   - Check for loose wires or poor connections
+   - Ensure both transceivers share common ground
+   - Verify transceiver power supplies are active
 
-**Possible Causes:**
-1. No ACK received (no other node on bus)
-2. Bus error (wiring issue)
-3. Bit timing mismatch
+3. **Termination Resistors**
+   - Confirm 120Ω resistor at VCU end of bus
+   - Confirm 120Ω resistor at BMS end of bus
+   - Measure resistance between CANH and CANL: should be ~60Ω with both terminators
 
-**Solutions:**
-- Ensure receiving board is powered and running
-- Check for loose connections
-- Verify termination resistors are present
+4. **CAN Transceiver Issues**
+   - Check transceiver power (typically 3.3V or 5V)
+   - Verify TX/RX pins connected correctly to MCU
+   - Some transceivers have enable/standby pins - verify they're configured
+
+5. **Bit Timing Mismatch**
+   - Both boards should be configured for 500 kbps
+   - VCU: 96 MHz / (12 × 16) = 500 kbps
+   - BMS: 170 MHz / (20 × 17) = 500 kbps
 
 ### Problem: fdcan_rx_error_count Increases
 
 **Possible Causes:**
-1. HAL_FDCAN_GetRxMessage() failing
-2. TX FIFO full when trying to echo
+1. `HAL_FDCAN_GetRxMessage()` failing in callback
+2. TX FIFO full when BMS tries to echo response back to VCU
+3. VCU not acknowledging the echo response
+
+**Solutions (BMS Side):**
+- Set breakpoint in `HAL_FDCAN_RxFifo0Callback()` to verify it's being called
+- Check if the error occurs during message reception or during echo transmission
+- Verify filter configuration is correct
+
+**VCU Side (requires reconnecting laptop):**
+- Check if VCU is receiving echo responses (may cause BMS echo failures)
+- Verify VCU's RX filter is configured to accept ID `0x22`
+
+### Problem: Intermittent Reception
+
+**Symptoms:**
+- `fdcan_rx_count` increments but not consistently every second
+- Some messages are lost
+
+**Possible Causes:**
+1. Noise on CAN bus (poor shielding, long wires, no twisted pair)
+2. Weak termination or impedance mismatch
+3. Transceiver issues or marginal power supply
 
 **Solutions:**
-- Check if FDCAN is properly started
-- Verify filter configuration
-- Check for interrupt priority conflicts
+- Use twisted pair cable for CANH/CANL
+- Keep cable length under 1 meter for initial testing
+- Check power supply stability on both boards
+- Add decoupling capacitors near transceivers if missing
 
 ### Problem: Code Stuck in Error_Handler()
 
 **Possible Causes:**
-1. FDCAN initialization failed
+1. FDCAN initialization failed (wrong clock configuration)
 2. Filter configuration failed
 3. FDCAN start failed
 
 **Solutions:**
-- Set breakpoint in Error_Handler()
-- Check which function call failed
-- Verify IOC configuration matches code
-- Regenerate code from CubeMX if needed
+- Set breakpoint in `Error_Handler()` and check call stack
+- Verify IOC file settings match code
+- Check if FDCAN clock is enabled in RCC configuration
+- Verify GPIO alternate functions are correctly set for FDCAN pins
+
+### Debugging Tip: Use Oscilloscope
+
+If you have an oscilloscope available:
+
+1. **Probe CANH and CANL** on the bus between the two boards
+2. **Trigger on CANH falling edge**
+3. **Expected waveform:**
+   - CANH idle: ~2.5V, dominant: ~3.5V
+   - CANL idle: ~2.5V, dominant: ~1.5V
+   - Differential voltage: ~0V idle, ~2V dominant state
+4. **Bit time:** 2 microseconds (500 kbps)
+5. **Frame rate:** Should see CAN frames every ~1 second
+
+If you see frames on the scope but BMS isn't receiving:
+- Problem is likely in BMS FDCAN configuration or interrupts
+- Verify NVIC interrupt priority and enabled status
+- Check if FDCAN1_IT0_IRQn is enabled
 
 ---
 

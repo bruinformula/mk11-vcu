@@ -1,7 +1,7 @@
-../Core/Src/main.c:93:6:HAL_ADC_ConvCpltCallback	16	static
-../Core/Src/main.c:100:6:HAL_FDCAN_RxFifo0Callback	80	static
-../Core/Src/main.c:132:6:HAL_FDCAN_RxFifo1Callback	16	static
-../Core/Src/main.c:156:5:main	80	static
-../Core/Src/main.c:339:6:SystemClock_Config	120	static
-../Core/Src/main.c:400:6:MPU_Config	24	static
-../Core/Src/main.c:431:6:Error_Handler	4	static,ignoring_inline_asm
+../Core/Src/main.c:100:6:HAL_ADC_ConvCpltCallback	16	static
+../Core/Src/main.c:107:6:HAL_FDCAN_RxFifo0Callback	80	static
+../Core/Src/main.c:144:6:HAL_FDCAN_RxFifo1Callback	80	static
+../Core/Src/main.c:186:5:main	80	static
+../Core/Src/main.c:391:6:SystemClock_Config	120	static
+../Core/Src/main.c:452:6:MPU_Config	24	static
+../Core/Src/main.c:483:6:Error_Handler	4	static,ignoring_inline_asm

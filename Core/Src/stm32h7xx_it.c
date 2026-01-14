@@ -41,7 +41,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+volatile uint32_t fdcan1_irq_count = 0;  /* Counter to verify if FDCAN1 interrupt fires */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -221,7 +221,7 @@ void DMA1_Stream0_IRQHandler(void)
 void FDCAN1_IT0_IRQHandler(void)
 {
   /* USER CODE BEGIN FDCAN1_IT0_IRQn 0 */
-
+  fdcan1_irq_count++;  /* Increment to verify interrupt fires */
   /* USER CODE END FDCAN1_IT0_IRQn 0 */
   HAL_FDCAN_IRQHandler(&hfdcan1);
   /* USER CODE BEGIN FDCAN1_IT0_IRQn 1 */

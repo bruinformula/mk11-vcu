@@ -38,13 +38,27 @@ extern FDCAN_HandleTypeDef hfdcan2;
 
 /* USER CODE BEGIN Private defines */
 
+// TX ID'S
+#define BMS_PRCHG_TX_ID 0x6BA
+#define INVERTER_TORQUE_REQUEST_TX_ID 0x0C0
+
+// RX ID's
+#define BMS_PRCHG_RX_ID 0x6B3
+
+
 /* USER CODE END Private defines */
 
 void MX_FDCAN1_Init(void);
 void MX_FDCAN2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+extern FDCAN_RxHeaderTypeDef RxHeader1;
+extern uint8_t RxData1[8];
+extern FDCAN_RxHeaderTypeDef RxHeader2;
+extern uint8_t RxData2[8];
 
+void FDCAN1_Rx_Handler(void);
+void FDCAN2_Rx_Handler(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

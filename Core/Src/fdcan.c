@@ -21,7 +21,8 @@
 #include "fdcan.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "prchg.h"
+#include "motor_control.h"
 /* USER CODE END 0 */
 
 FDCAN_HandleTypeDef hfdcan1;
@@ -279,5 +280,27 @@ void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* fdcanHandle)
 }
 
 /* USER CODE BEGIN 1 */
+FDCAN_RxHeaderTypeDef RxHeader1;
+uint8_t RxData1[8];
+FDCAN_RxHeaderTypeDef RxHeader2;
+uint8_t RxData2[8];
+
+// Drive-Critical CAN
+void FDCAN1_Rx_Handler(void) {
+	uint16_t msg_id = RxHeader1.Identifier;
+
+	switch(msg_id) {
+	case BMS_PRCHG_RX_ID:
+		processPrechargeResponse();
+		break;
+	}
+
+	// case: Crash Switch/E-Stop = Inverter Voltage dropped below threshold (?)
+}
+
+// DAQ CAN
+void FDCAN2_Rx_Handler(void) {
+
+}
 
 /* USER CODE END 1 */

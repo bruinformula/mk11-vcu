@@ -21,11 +21,16 @@
 #include "adc.h"
 #include "dma.h"
 #include "fdcan.h"
+#include "i2s.h"
+#include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdbool.h>
+#include "prchg.h"
+#include "startup_sound.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,6 +46,8 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
+#define RTD_BRAKE_THRESHOLD 1500
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -48,19 +55,25 @@
 /* USER CODE BEGIN PV */
 uint16_t ADC_VAL[3];
 float voltage_values[3];
-int indx = 0;
-int debug1_cb = 0;
-int debug2_cb = 0;
+int fdcan1_debug_cb = 0;
+int fdcan2_debug_cb = 0;
 
-FDCAN_TxHeaderTypeDef   TxHeader1;
-FDCAN_RxHeaderTypeDef   RxHeader1;
-uint8_t               TxData1[8] = {66, 77, 66, 77, 66, 77, 66, 77};  /* VCU TX pattern */
-uint8_t               RxData1[8] = {66, 99, 66, 99, 66, 99, 66, 99};  /* VCU RX pattern */
+volatile uint32_t fdcan_rx_count = 0;          /* Counter for received messages */
+volatile uint32_t fdcan_tx_count = 0;          /* Counter for transmitted messages */
+volatile uint32_t fdcan_rx_error_count = 0;    /* RX error counter */
 
-FDCAN_TxHeaderTypeDef   TxHeader2;
-FDCAN_RxHeaderTypeDef   RxHeader2;
-uint8_t               TxData2[8] = {66, 77, 66, 77, 66, 77, 66, 77};  /* VCU TX pattern */
-uint8_t               RxData2[8] = {66, 99, 66, 99, 66, 99, 66, 99};  /* VCU RX pattern */
+volatile bool bms_fault;
+volatile bool imd_fault;
+volatile bool bspd_fault;
+
+volatile bool rtd_button_pressed;
+volatile bool prchg_button_pressed;
+
+volatile uint8_t rtd_debug;
+volatile uint8_t prchg_debug;
+
+bool ready_to_drive;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,107 +86,113 @@ static void MPU_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/** TEST MODE SELECTION **/
-/* Set to 1 for VCU transmit mode, 0 for VCU receive mode */
-#define VCU_TRANSMIT_MODE 0
-
-/* Set to 1 for FDCAN1, 2 for FDCAN2 */
-#define VCU_FDCAN_SELECT 2
-
-/* Set to 1 to echo received messages back (for normal mode testing) */
-/* Set to 0 to disable echo (for external loopback testing) */
-#define VCU_ECHO_ENABLE 1
-
-/** FDCAN Test Debug Variables (matches BMS naming) **/
-volatile uint32_t fdcan_rx_count = 0;          /* Counter for received messages */
-volatile uint32_t fdcan_last_rx_id = 0;        /* Last received message ID */
-volatile uint8_t fdcan_last_rx_data[8] = {0};  /* Last received data */
-volatile uint32_t fdcan_rx_error_count = 0;    /* RX error counter */
-volatile uint32_t fdcan_tx_count = 0;          /* Counter for transmitted messages */
-
-/** FDCAN Status Registers **/
-volatile uint32_t fdcan_psr_register = 0;      /* Protocol Status Register */
-volatile uint32_t fdcan_cccr_register = 0;     /* Control and Configuration Register */
-volatile uint32_t fdcan_ecr_register = 0;      /* Error Counter Register */
-volatile uint32_t fdcan_txfqs_register = 0;    /* TX FIFO/Queue Status Register */
-
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 2.4V)
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 3.3V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 3.3V)
 }
 
-// FDCAN1 Callback (matches BMS logic)
-void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-{
-	debug1_cb++;
-	if (RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE)
-	{
-		FDCAN_RxHeaderTypeDef localRxHeader;
-		uint8_t localRxData[8];
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	// Change BMS Fault Logic? --> NOT Latching Fault, can re-enter Precharge if BMS Fault Clears!
+	if (GPIO_Pin == BMS_FAULT_Pin) {
+		bms_fault = true;
+		Error_Handler();
+	}
 
-		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &localRxHeader, localRxData) != HAL_OK)
-		{
-			fdcan_rx_error_count++;
-			return;
-		}
+	if (GPIO_Pin == IMD_FAULT_Pin) {
+		imd_fault = true;
+		Error_Handler();
+	}
 
-		/* Store received data for debugging */
-		fdcan_rx_count++;
-		fdcan_last_rx_id = localRxHeader.Identifier;
-		for (int i = 0; i < 8; i++) {
-			fdcan_last_rx_data[i] = localRxData[i];
-		}
+	if (GPIO_Pin == BSPD_FAULT_Pin) {
+		bspd_fault = true;
+		Error_Handler();
+	}
 
-		/* Also copy to global RxData/RxHeader for debugger visibility */
-		RxHeader1 = localRxHeader;
-		for (int i = 0; i < 8; i++) {
-			RxData1[i] = localRxData[i];
+	if (GPIO_Pin == RTD_BTN_Pin) {
+		rtd_debug++;
+		if (HAL_GPIO_ReadPin(RTD_BTN_GPIO_Port, RTD_BTN_Pin) == GPIO_PIN_SET) {
+			rtd_button_pressed = true;
+            __HAL_TIM_SET_COUNTER(&htim1, 0);
+            HAL_TIM_Base_Start_IT(&htim1);
+		} else {
+			// Button Released
+			rtd_button_pressed = false;
+            HAL_TIM_Base_Stop_IT(&htim1);
 		}
+	}
 
-#if VCU_ECHO_ENABLE
-		/* Echo received message back on FDCAN1 */
-		if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, localRxData) == HAL_OK) {
-			fdcan_tx_count++;
+	if (GPIO_Pin == PRCHG_BTN_Pin) {
+		prchg_debug++;
+		if (HAL_GPIO_ReadPin(PRCHG_BTN_GPIO_Port, PRCHG_BTN_Pin) == GPIO_PIN_SET) {
+			prchg_button_pressed = true;
+		    __HAL_TIM_SET_COUNTER(&htim1, 0);
+		    HAL_TIM_Base_Start_IT(&htim1);
+		} else {
+			// Button Released
+			prchg_button_pressed = false;
+		    HAL_TIM_Base_Stop_IT(&htim1);
 		}
-#endif
 	}
 }
 
-// FDCAN2 Callback (matches BMS logic)
-void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
-{
-	debug2_cb++;
-	if (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)
-	{
-		FDCAN_RxHeaderTypeDef localRxHeader;
-		uint8_t localRxData[8];
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM1) {
+    	if (rtd_button_pressed == true) {
 
-		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &localRxHeader, localRxData) != HAL_OK)
+//    		if (inverter_precharged == false) {
+//    			return;
+//    		}
+
+    		// TODO: Handle button logic
+    		if (ADC_VAL[2] > RTD_BRAKE_THRESHOLD) {
+    			ready_to_drive = true;
+    		} else {
+    			ready_to_drive = false;
+    		}
+    	}
+
+    	if (prchg_button_pressed == true) {
+    		// TODO: Handle button logic
+    		configurePrechargeMessage();
+    		sendPrechargeRequest();
+    	}
+    }
+}
+
+// FDCAN1 Callback
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+{
+	fdcan1_debug_cb++;
+	if (RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE)
+	{
+
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader1, RxData1) != HAL_OK)
 		{
 			fdcan_rx_error_count++;
 			return;
 		}
 
-		/* Store received data for debugging */
 		fdcan_rx_count++;
-		fdcan_last_rx_id = localRxHeader.Identifier;
-		for (int i = 0; i < 8; i++) {
-			fdcan_last_rx_data[i] = localRxData[i];
+		FDCAN1_Rx_Handler();
+	}
+}
+
+// FDCAN2 Callback
+void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
+{
+	fdcan2_debug_cb++;
+	if (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)
+	{
+
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &RxHeader2, RxData2) != HAL_OK)
+		{
+			fdcan_rx_error_count++;
+			return;
 		}
 
-		/* Also copy to global RxData/RxHeader for debugger visibility */
-		RxHeader2 = localRxHeader;
-		for (int i = 0; i < 8; i++) {
-			RxData2[i] = localRxData[i];
-		}
-
-#if VCU_ECHO_ENABLE
-		/* Echo received message back on FDCAN2 */
-		if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader2, localRxData) == HAL_OK) {
-			fdcan_tx_count++;
-		}
-#endif
+		fdcan_rx_count++;
+		FDCAN2_Rx_Handler();
 	}
 }
 
@@ -215,6 +234,8 @@ int main(void)
   MX_ADC3_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
+  MX_TIM1_Init();
+  MX_I2S2_Init();
   /* USER CODE BEGIN 2 */
 
   // FDCAN1 FILTER SETUP
@@ -287,96 +308,15 @@ int main(void)
 	  Error_Handler();
   }
 
-  // Configure TX Header for FDCAN1
-  TxHeader1.Identifier = 0x67;  /* VCU TX ID */
-  TxHeader1.IdType = FDCAN_STANDARD_ID;
-  TxHeader1.TxFrameType = FDCAN_DATA_FRAME;
-  TxHeader1.DataLength = FDCAN_DLC_BYTES_8;
-  TxHeader1.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-  TxHeader1.BitRateSwitch = FDCAN_BRS_OFF;
-  TxHeader1.FDFormat = FDCAN_CLASSIC_CAN;
-  TxHeader1.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-  TxHeader1.MessageMarker = 0;
-
-  // Configure TX Header for FDCAN2
-  TxHeader2.Identifier = 0x67;  /* VCU TX ID */
-  TxHeader2.IdType = FDCAN_STANDARD_ID;
-  TxHeader2.TxFrameType = FDCAN_DATA_FRAME;
-  TxHeader2.DataLength = FDCAN_DLC_BYTES_8;
-  TxHeader2.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-  TxHeader2.BitRateSwitch = FDCAN_BRS_OFF;
-  TxHeader2.FDFormat = FDCAN_CLASSIC_CAN;
-  TxHeader2.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-  TxHeader2.MessageMarker = 0;
-
-//
-//  // Initialize RX Header for FDCAN1 (optional - will be overwritten by GetRxMessage)
-//   RxHeader1.Identifier = 0x11;
-//   RxHeader1.IdType = FDCAN_STANDARD_ID;
-//   RxHeader1.RxFrameType = FDCAN_DATA_FRAME;
-//   RxHeader1.DataLength = FDCAN_DLC_BYTES_8;
-//   RxHeader1.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-//   RxHeader1.BitRateSwitch = FDCAN_BRS_OFF;
-//   RxHeader1.FDFormat = FDCAN_CLASSIC_CAN;
-//   RxHeader1.RxTimestamp = 0;
-//   RxHeader1.FilterIndex = 0;
-//   RxHeader1.IsFilterMatchingFrame = 0;
-//
-//   // Initialize RX Header for FDCAN2 (optional - will be overwritten by GetRxMessage)
-//   RxHeader2.Identifier = 0x22;
-//   RxHeader2.IdType = FDCAN_STANDARD_ID;
-//   RxHeader2.RxFrameType = FDCAN_DATA_FRAME;
-//   RxHeader2.DataLength = FDCAN_DLC_BYTES_8;
-//   RxHeader2.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-//   RxHeader2.BitRateSwitch = FDCAN_BRS_OFF;
-//   RxHeader2.FDFormat = FDCAN_CLASSIC_CAN;
-//   RxHeader2.RxTimestamp = 0;
-//   RxHeader2.FilterIndex = 0;
-//   RxHeader2.IsFilterMatchingFrame = 0;
-
-//  HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
-//  HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
+  HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
+  HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  /* ========== FDCAN TEST MAIN LOOP ========== */
-  while (1)
-  {
-#if VCU_TRANSMIT_MODE
-	  /* ========== VCU TRANSMIT MODE ========== */
-	  /* VCU transmits ID 0x676 to BMS every 1 second */
-	  /* BMS should receive and log the message */
-  #if (VCU_FDCAN_SELECT == 1)
-	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader1, TxData1) == HAL_OK) {
-		  fdcan_tx_count++;  /* Increment on successful TX */
-	  }
-  #else
-	  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader2, TxData2) == HAL_OK) {
-		  fdcan_tx_count++;  /* Increment on successful TX */
-	  }
-  #endif
-	  HAL_Delay(1000);
-#else
-	  /* ========== VCU RECEIVE MODE ========== */
-	  /* VCU receives messages from BMS (ID 0x696) */
-	  /* Check fdcan_rx_count, fdcan_last_rx_data[], fdcan_last_rx_id in debugger */
-	  HAL_Delay(1000);
-#endif
+  while (1) {
 
-	  /* Read status registers for debugging (common to both modes) */
-#if (VCU_FDCAN_SELECT == 1)
-	  fdcan_psr_register = hfdcan1.Instance->PSR;     /* Protocol Status */
-	  fdcan_ecr_register = hfdcan1.Instance->ECR;     /* Error Counters */
-	  fdcan_cccr_register = hfdcan1.Instance->CCCR;   /* Control Register */
-	  fdcan_txfqs_register = hfdcan1.Instance->TXFQS; /* TX FIFO Queue Status */
-#else
-	  fdcan_psr_register = hfdcan2.Instance->PSR;     /* Protocol Status */
-	  fdcan_ecr_register = hfdcan2.Instance->ECR;     /* Error Counters */
-	  fdcan_cccr_register = hfdcan2.Instance->CCCR;   /* Control Register */
-	  fdcan_txfqs_register = hfdcan2.Instance->TXFQS; /* TX FIFO Queue Status */
-#endif
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

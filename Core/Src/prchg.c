@@ -25,16 +25,18 @@ void configurePrechargeMessage() {
 	PRCHG_TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
 	PRCHG_TxHeader.MessageMarker = 0;
 
-	// TODO: Configure TxData accordingly..
+	// TODO: Configure TxData accordingly!
 	PRCHG_TxData[0] = 0x00;
 }
 
 void sendPrechargeRequest() {
+	// TODO
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &PRCHG_TxHeader, PRCHG_TxData) != HAL_OK) {
-		// HANDLE FAILURE
+		// HANDLE FAILURE!
 	}
+
 	// OTHERWISE, SENT.... AWAIT RESPONSE..
-	// 5 Second Timeout? How to implement...
+	// 5 Second Timeout? Implement with a timer?
 }
 
 void processPrechargeResponse() {

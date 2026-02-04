@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdbool.h>
+#include "motor_control.h"
 #include "prchg.h"
 #include "startup_sound.h"
 /* USER CODE END Includes */
@@ -47,6 +48,9 @@
 /* USER CODE BEGIN PM */
 
 #define RTD_BRAKE_THRESHOLD 1500
+#define WAV_HEADER_SIZE 44
+#define CACHE_LINE_SIZE 32
+#define I2S_DMA_MAX_SAMPLES 65535
 
 /* USER CODE END PM */
 
@@ -96,16 +100,19 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	// Change BMS Fault Logic? --> NOT Latching Fault, can re-enter Precharge if BMS Fault Clears!
 	if (GPIO_Pin == BMS_FAULT_Pin) {
 		bms_fault = true;
-		Error_Handler();
+		stopMotor();
+//		Error_Handler();
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
 		imd_fault = true;
+		stopMotor();
 		Error_Handler();
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
 		bspd_fault = true;
+		stopMotor();
 		Error_Handler();
 	}
 
@@ -116,7 +123,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
             __HAL_TIM_SET_COUNTER(&htim1, 0);
             HAL_TIM_Base_Start_IT(&htim1);
 		} else {
-			// Button Released
+			// Button Released!
 			rtd_button_pressed = false;
             HAL_TIM_Base_Stop_IT(&htim1);
 		}
@@ -129,7 +136,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		    __HAL_TIM_SET_COUNTER(&htim1, 0);
 		    HAL_TIM_Base_Start_IT(&htim1);
 		} else {
-			// Button Released
+			// Button Released!
 			prchg_button_pressed = false;
 		    HAL_TIM_Base_Stop_IT(&htim1);
 		}
@@ -138,6 +145,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
+
+    	if (prchg_button_pressed == true) {
+    		// TODO: HANDLE BUTTON LOGIC
+    		configurePrechargeMessage();
+    		sendPrechargeRequest();
+    	}
+
     	if (rtd_button_pressed == true) {
 
 //    		if (inverter_precharged == false) {
@@ -146,16 +160,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     		// TODO: Handle button logic
     		if (ADC_VAL[2] > RTD_BRAKE_THRESHOLD) {
+    			// TODO: playReadyToDriveSound()
     			ready_to_drive = true;
     		} else {
     			ready_to_drive = false;
     		}
-    	}
-
-    	if (prchg_button_pressed == true) {
-    		// TODO: Handle button logic
-    		configurePrechargeMessage();
-    		sendPrechargeRequest();
     	}
     }
 }

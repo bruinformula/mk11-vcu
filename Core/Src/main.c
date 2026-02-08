@@ -47,18 +47,20 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
-#define RTD_BRAKE_THRESHOLD 1500
-#define WAV_HEADER_SIZE 44
-#define CACHE_LINE_SIZE 32
-#define I2S_DMA_MAX_SAMPLES 65535
+#define WAV_HEADER_SIZE         44
+#define WAV_DATA_SIZE           (startup_sound_len - WAV_HEADER_SIZE)
+#define TOTAL_HALFWORDS         (WAV_DATA_SIZE / 2)
+#define CHUNK_SIZE_HALFWORDS    30000
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint16_t ADC_VAL[3];
-float voltage_values[3];
+
+//uint16_t ADC_VAL[3];
+//float voltage_values[3];
+
 int fdcan1_debug_cb = 0;
 int fdcan2_debug_cb = 0;
 
@@ -78,6 +80,11 @@ volatile uint8_t prchg_debug;
 
 bool ready_to_drive;
 
+static uint32_t wavPos = 0;
+static const uint16_t *wavePCM = NULL;
+static uint32_t halfwordCount = 0;
+static uint8_t waveFinished = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,10 +97,64 @@ static void MPU_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
+	if (hi2s->Instance == SPI2 && !waveFinished) {
+		// finished one chunk
+		if (wavPos < halfwordCount) {
+			// Start the next chunk
+			uint32_t remain = halfwordCount - wavPos;
+			uint16_t thisChunk =
+					(remain > CHUNK_SIZE_HALFWORDS) ?
+					CHUNK_SIZE_HALFWORDS :
+														(uint16_t) remain;
+			const uint16_t *chunkPtr = wavePCM + wavPos;
+			wavPos += thisChunk;
+
+			HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*) chunkPtr, thisChunk);
+		} else {
+			// entire wave is done
+			waveFinished = 1;
+			ready_to_drive = true;
+			HAL_I2S_DMAStop(&hi2s2);
+		}
+	}
+}
+
+void playReadyToDriveSound() {
+	wavePCM = (const uint16_t*) (&startup_sound[WAV_HEADER_SIZE]);
+	halfwordCount = TOTAL_HALFWORDS;
+	wavPos = 0;
+	waveFinished = 0;
+
+	uint32_t remain = halfwordCount - wavPos;
+	uint16_t thisChunk = (remain > CHUNK_SIZE_HALFWORDS) ? CHUNK_SIZE_HALFWORDS : (uint16_t) remain;
+	const uint16_t *chunkPtr = wavePCM + wavPos;
+	wavPos += thisChunk;
+
+	HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*) chunkPtr, thisChunk);
+}
+
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+	// Conversions for debugging purposes; probe the inputs on VCU PCB and compare to live expressions
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 2.4V)
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 3.3V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 3.3V)
+
+	if (ready_to_drive == true && inverter_precharged) {
+		// DRIVE MODE!
+
+		pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
+		pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
+		pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
+
+		calculateTorqueRequest();
+		checkAPPS_Plausibility();
+		checkBSE_Plausibility();
+		checkAPPS_BSE_Crosscheck();
+		sendTorqueRequest( (int)(requestedTorque*10) );
+	}
+
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
@@ -147,21 +208,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
 
     	if (prchg_button_pressed == true) {
-    		// TODO: HANDLE BUTTON LOGIC
     		configurePrechargeMessage();
     		sendPrechargeRequest();
+
+    		// COMMENT OUT WHEN CAN IS BEING USED... THIS IS FOR DEBUGGING/TESTING TO "SKIP" ACTUAL PRECHARGE
+    		inverter_precharged = true;
     	}
 
     	if (rtd_button_pressed == true) {
 
-//    		if (inverter_precharged == false) {
-//    			return;
-//    		}
+    		if (inverter_precharged == false) {
+    			return;
+    		}
 
-    		// TODO: Handle button logic
-    		if (ADC_VAL[2] > RTD_BRAKE_THRESHOLD) {
-    			// TODO: playReadyToDriveSound()
-    			ready_to_drive = true;
+    		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
+    			playReadyToDriveSound(); // Sets ready_to_drive = true once I2S data stream is complete
     		} else {
     			ready_to_drive = false;
     		}

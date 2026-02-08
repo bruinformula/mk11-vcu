@@ -1,3 +1,7 @@
-../Core/Src/motor_control.c:13:6:configureInverterMessage	4	static
-../Core/Src/motor_control.c:24:6:sendTorqueRequest	24	static
-../Core/Src/motor_control.c:45:6:stopMotor	16	static
+../Core/Src/motor_control.c:23:6:configureInverterMessage	4	static
+../Core/Src/motor_control.c:35:6:calculateTorqueRequest	16	static
+../Core/Src/motor_control.c:49:6:checkAPPS_Plausibility	16	static
+../Core/Src/motor_control.c:69:6:checkBSE_Plausibility	16	static
+../Core/Src/motor_control.c:88:6:checkAPPS_BSE_Crosscheck	16	static
+../Core/Src/motor_control.c:107:6:sendTorqueRequest	24	static
+../Core/Src/motor_control.c:126:6:stopMotor	16	static

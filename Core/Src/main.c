@@ -115,7 +115,6 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
 			// entire wave is done
 			waveFinished = 1;
 			ready_to_drive = true;
-			HAL_I2S_DMAStop(&hi2s2);
 		}
 	}
 }
@@ -162,7 +161,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BMS_FAULT_Pin) {
 		bms_fault = true;
 		stopMotor();
-//		Error_Handler();
+		Error_Handler();
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
@@ -495,6 +494,9 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  HAL_I2S_DMAStop(&hi2s2);
+  HAL_ADC_Stop_DMA(&hadc3);
+
   while (1)
   {
   }

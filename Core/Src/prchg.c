@@ -26,7 +26,14 @@ void configurePrechargeMessage() {
 	PRCHG_TxHeader.MessageMarker = 0;
 
 	// TODO: Configure TxData accordingly!
-	PRCHG_TxData[0] = 0x00;
+	PRCHG_TxData[0] = 0xAA;
+	PRCHG_TxData[1] = 0xBB;
+	PRCHG_TxData[2] = 0xCC;
+	PRCHG_TxData[3] = 0xDD;
+	PRCHG_TxData[4] = 0xEE;
+	PRCHG_TxData[5] = 0xFF;
+	PRCHG_TxData[6] = 0x00;
+	PRCHG_TxData[7] = 0x00;
 }
 
 void sendPrechargeRequest() {
@@ -35,6 +42,7 @@ void sendPrechargeRequest() {
 		// HANDLE FAILURE!
 	}
 
+	// TODO
 	// OTHERWISE, SENT.... AWAIT RESPONSE..
 	// 5 Second Timeout? Implement with a timer?
 }

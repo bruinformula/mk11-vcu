@@ -140,7 +140,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 3.3V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 3.3V)
 
-	if (ready_to_drive == true && inverter_precharged) {
+	if (ready_to_drive == true && inverter_precharged == true) {
 		// DRIVE MODE!
 
 		pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
@@ -211,7 +211,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     		sendPrechargeRequest();
 
     		// COMMENT OUT WHEN CAN IS BEING USED... THIS IS FOR DEBUGGING/TESTING TO "SKIP" ACTUAL PRECHARGE
-    		inverter_precharged = true;
+    		// inverter_precharged = true;
     	}
 
     	if (rtd_button_pressed == true) {
@@ -322,15 +322,6 @@ int main(void)
     Error_Handler();
   }
 
-  // Configure FDCAN1 Global Filter - Accept All to FIFO0
-  if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
-                                    FDCAN_ACCEPT_IN_RX_FIFO0,  // Accept non-matching standard IDs to FIFO0
-                                    FDCAN_REJECT,              // Reject extended IDs (not used)
-                                    DISABLE,
-                                    DISABLE) != HAL_OK) {
-    Error_Handler();
-  }
-
   // FDCAN2 FILTER SETUP
   FDCAN_FilterTypeDef sFilterConfig_2 = {0};
   sFilterConfig_2.IdType = FDCAN_STANDARD_ID;
@@ -345,17 +336,9 @@ int main(void)
     /* Filter configuration Error */
     Error_Handler();
   }
-  // Configure FDCAN2 Global Filter - Accept All
-  if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan2,
-                                    FDCAN_ACCEPT_IN_RX_FIFO1,  // Accept ALL standard IDs to FIFO1
-                                    FDCAN_REJECT,              // Reject extended IDs (not used)
-                                    DISABLE,
-                                    DISABLE) != HAL_OK) {
-    Error_Handler();
-  }
 
   // Start FDCAN1
-  if(HAL_FDCAN_Start(&hfdcan1)!= HAL_OK) {
+  if(HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
 	  Error_Handler();
   }
 

@@ -39,11 +39,11 @@ extern FDCAN_HandleTypeDef hfdcan2;
 /* USER CODE BEGIN Private defines */
 
 // TX ID'S
-#define BMS_PRCHG_TX_ID 0x6BA
+#define BMS_PRCHG_TX_ID 0x6B3
 #define INVERTER_TORQUE_REQUEST_TX_ID 0x0C0
 
 // RX ID's
-#define BMS_PRCHG_RX_ID 0x6B3
+#define BMS_PRCHG_RX_ID 0x6B4
 
 
 /* USER CODE END Private defines */

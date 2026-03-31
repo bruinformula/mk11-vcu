@@ -213,9 +213,22 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
 }
 
 void playReadyToDriveSound() {
-  if (HAL_I2S_GetState(&hi2s2) != HAL_I2S_STATE_READY ||
-      !audioPlaybackAllowed()) {
+  if (!audioPlaybackAllowed()) {
     return; // Avoid re-triggering if busy
+  }
+
+  if (HAL_I2S_GetState(&hi2s2) != HAL_I2S_STATE_READY) {
+    captureI2SDebugState();
+    if (debug.i2s_state == HAL_I2S_STATE_BUSY ||
+        debug.i2s_state == HAL_I2S_STATE_BUSY_TX ||
+        debug.i2s_state == HAL_I2S_STATE_BUSY_TX_RX) {
+      debug.last_dma_stop_status = HAL_I2S_DMAStop(&hi2s2);
+    }
+
+    captureI2SDebugState();
+    if (debug.i2s_state != HAL_I2S_STATE_READY) {
+      return;
+    }
   }
 
   setReadyToDriveOnPlaybackComplete = true;
@@ -240,7 +253,33 @@ void playReadyToDriveSound() {
       &hi2s2, preparePlaybackChunk(chunkPtr, thisChunk), thisChunk);
   captureI2SDebugState();
   if (debug.last_i2s_status != HAL_OK) {
-    return;
+    wavPos = 0;
+    waveFinished = 0;
+    debug.wave_halfword_position = 0;
+
+    while (wavPos < halfwordCount) {
+      remain = halfwordCount - wavPos;
+      thisChunk = (remain > CHUNK_SIZE_HALFWORDS) ? CHUNK_SIZE_HALFWORDS
+                                                  : (uint16_t)remain;
+      chunkPtr = wavePCM + wavPos;
+
+      debug.last_i2s_status = HAL_I2S_Transmit(
+          &hi2s2, preparePlaybackChunk(chunkPtr, thisChunk), thisChunk, 1000);
+      captureI2SDebugState();
+      if (debug.last_i2s_status != HAL_OK) {
+        return;
+      }
+
+      wavPos += thisChunk;
+      debug.wave_halfword_position = wavPos;
+    }
+
+    waveFinished = 1;
+    lastPlaybackStartTick = HAL_GetTick();
+    debug.playback_finished++;
+    debug.wave_halfword_position = halfwordCount;
+    ready_to_drive = true;
+    setReadyToDriveOnPlaybackComplete = false;
   }
 }
 

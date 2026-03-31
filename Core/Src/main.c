@@ -54,7 +54,7 @@
 #define WAV_HEADER_SIZE 44
 #define WAV_DATA_SIZE (startup_sound_len - WAV_HEADER_SIZE)
 #define TOTAL_HALFWORDS (WAV_DATA_SIZE / 2)
-#define CHUNK_SIZE_HALFWORDS 4096U
+#define CHUNK_SIZE_HALFWORDS 30000U
 #define TEST_TONE_FRAME_COUNT 4410U
 #define TEST_TONE_CHANNEL_COUNT 2U
 #define TEST_TONE_HALFWORD_COUNT                                             \
@@ -63,7 +63,7 @@
 #define BOOT_AUDIO_SELFTEST 0U
 #define DIRECT_RTD_AUDIO_BUTTON 1U
 #define AUDIO_RETRIGGER_GUARD_MS 750U
-#define RTD_VOLUME_SHIFT 2U
+#define RTD_VOLUME_SHIFT 0U
 #define TEST_TONE_HIGH_SAMPLE ((uint16_t)0x1000)
 #define TEST_TONE_LOW_SAMPLE ((uint16_t)0xF000)
 
@@ -193,6 +193,7 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
     } else {
       // entire wave is done
       waveFinished = 1;
+      HAL_I2S_DMAStop(&hi2s2);
       lastPlaybackStartTick = HAL_GetTick();
       debug.playback_finished++;
       debug.wave_halfword_position = halfwordCount;
@@ -218,7 +219,7 @@ void playReadyToDriveSound() {
   }
 
   setReadyToDriveOnPlaybackComplete = true;
-  scalePlaybackSamples = true;
+  scalePlaybackSamples = (RTD_VOLUME_SHIFT != 0U);
   debug.playback_kind = 2;
   debug.playback_started++;
   wavePCM = (const uint16_t *)(&startup_sound[WAV_HEADER_SIZE]);
@@ -228,31 +229,19 @@ void playReadyToDriveSound() {
   debug.wave_halfword_count = halfwordCount;
   debug.wave_halfword_position = 0;
 
-  while (wavPos < halfwordCount) {
-    uint32_t remain = halfwordCount - wavPos;
-    uint16_t thisChunk =
-        (remain > CHUNK_SIZE_HALFWORDS) ? CHUNK_SIZE_HALFWORDS
-                                        : (uint16_t)remain;
-    const uint16_t *chunkPtr = wavePCM + wavPos;
+  uint32_t remain = halfwordCount - wavPos;
+  uint16_t thisChunk =
+      (remain > CHUNK_SIZE_HALFWORDS) ? CHUNK_SIZE_HALFWORDS : (uint16_t)remain;
+  const uint16_t *chunkPtr = wavePCM + wavPos;
+  wavPos += thisChunk;
+  debug.wave_halfword_position = wavPos;
 
-    debug.last_i2s_status =
-        HAL_I2S_Transmit(&hi2s2, preparePlaybackChunk(chunkPtr, thisChunk),
-                         thisChunk, 1000);
-    captureI2SDebugState();
-    if (debug.last_i2s_status != HAL_OK) {
-      return;
-    }
-
-    wavPos += thisChunk;
-    debug.wave_halfword_position = wavPos;
+  debug.last_i2s_status = HAL_I2S_Transmit_DMA(
+      &hi2s2, preparePlaybackChunk(chunkPtr, thisChunk), thisChunk);
+  captureI2SDebugState();
+  if (debug.last_i2s_status != HAL_OK) {
+    return;
   }
-
-  waveFinished = 1;
-  lastPlaybackStartTick = HAL_GetTick();
-  debug.playback_finished++;
-  debug.wave_halfword_position = halfwordCount;
-  ready_to_drive = true;
-  setReadyToDriveOnPlaybackComplete = false;
 }
 
 void testSpeaker() {

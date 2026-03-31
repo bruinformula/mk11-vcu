@@ -285,7 +285,7 @@ uint8_t RxData1[8];
 FDCAN_RxHeaderTypeDef RxHeader2;
 uint8_t RxData2[8];
 
-// Drive-Critical CAN
+// Drive-Critical CAN RX HANDLER
 void FDCAN1_Rx_Handler(void) {
 	uint16_t msg_id = RxHeader1.Identifier;
 
@@ -293,12 +293,18 @@ void FDCAN1_Rx_Handler(void) {
 	case BMS_PRCHG_RX_ID:
 		processPrechargeResponse();
 		break;
-	}
 
-	// case: Crash Switch/E-Stop = Inverter Voltage dropped below threshold (?)
+	case INVERTER_VOLTAGE_RX_ID:
+		processInverter_Voltage();
+		break;
+
+	case INVERTER_RPM_RX_ID:
+		processInverter_RPM();
+		break;
+	}
 }
 
-// DAQ CAN
+// DAQ CAN RX HANDLER
 void FDCAN2_Rx_Handler(void) {
 
 }

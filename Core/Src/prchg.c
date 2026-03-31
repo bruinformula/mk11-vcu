@@ -12,7 +12,7 @@ FDCAN_TxHeaderTypeDef PRCHG_TxHeader;
 uint8_t PRCHG_TxData[1];
 bool inverter_precharged;
 
-// TODO: A struct to hold the "status" of precharge w/ a couple of booleans and uint8_t...
+// TODO: A struct to hold state machine of Precharge Sequence...
 
 void configurePrechargeMessage() {
 	PRCHG_TxHeader.Identifier = BMS_PRCHG_TX_ID;  /* VCU TX ID */
@@ -24,16 +24,6 @@ void configurePrechargeMessage() {
 	PRCHG_TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
 	PRCHG_TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
 	PRCHG_TxHeader.MessageMarker = 0;
-
-	// TODO: Configure TxData accordingly!
-	PRCHG_TxData[0] = 0xAA;
-	PRCHG_TxData[1] = 0xBB;
-	PRCHG_TxData[2] = 0xCC;
-	PRCHG_TxData[3] = 0xDD;
-	PRCHG_TxData[4] = 0xEE;
-	PRCHG_TxData[5] = 0xFF;
-	PRCHG_TxData[6] = 0x00;
-	PRCHG_TxData[7] = 0x00;
 }
 
 void sendPrechargeRequest() {
@@ -48,5 +38,6 @@ void sendPrechargeRequest() {
 }
 
 void processPrechargeResponse() {
+	// TODO: Precharge may fail, parse the received message from BMS accordingly
 	inverter_precharged = true;
 }

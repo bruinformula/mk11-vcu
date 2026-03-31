@@ -44,7 +44,8 @@ extern FDCAN_HandleTypeDef hfdcan2;
 
 // RX ID's
 #define BMS_PRCHG_RX_ID 0x6B4
-
+#define INVERTER_VOLTAGE_RX_ID 0x0A7
+#define INVERTER_RPM_RX_ID 0x0A5
 
 /* USER CODE END Private defines */
 

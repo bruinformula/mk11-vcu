@@ -38,7 +38,7 @@ extern I2S_HandleTypeDef hi2s2;
 
 /* USER CODE END Private defines */
 
-void MX_I2S2_Init(void);
+HAL_StatusTypeDef MX_I2S2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 

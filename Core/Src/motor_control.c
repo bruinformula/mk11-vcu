@@ -13,6 +13,9 @@ uint16_t ADC_VAL[3];
 float voltage_values[3];
 float pedal_percents[3];
 float requestedTorque;
+float inverter_diagnostics_rpm;
+float inverter_diagnostics_voltage;
+float inverter_diagnostics_carspeed;
 
 bool apps_plausible = true;
 uint32_t millis_since_apps_implausible;
@@ -114,17 +117,25 @@ void sendTorqueRequest(int requestedTorque_i) {
 	Inverter_TxData[3] = 0;
 	Inverter_TxData[4] = 1; // Forward
 	Inverter_TxData[5] = 1; // Inverter On
-	Inverter_TxData[6] = 0; // Default Torque Limits
-	Inverter_TxData[7] = 0; // Default Torque Limits
+	Inverter_TxData[6] = 0; // Default Torque Limits in EEPROM
+	Inverter_TxData[7] = 0; // Default Torque Limits in EEPROM
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader, Inverter_TxData) != HAL_OK) {
-		// HANDLE FAILURE!
+		// HANDLE CAN FAILURE!
 	}
 
 }
 
-void stopMotor() {
-	for (int i = 0; i < 5; ++i) {
-		sendTorqueRequest(0);
-	}
+void processInverter_Voltage() {
+	int16_t inverter_dc_volts_raw = (int16_t) ((RxData1[1] << 8)
+				| RxData1[0]);  // Little-endian
+	inverter_diagnostics_voltage = inverter_dc_volts_raw * 0.1f;
+	// TODO: Process voltage dropping below certain threshold
+}
+
+void processInverter_RPM() {
+	inverter_diagnostics_rpm = (float) (RxData1[2]
+				| (RxData1[3] << 8));
+	inverter_diagnostics_carspeed = (float) (inverter_diagnostics_rpm)
+				* RPM_TO_CARSPEED_CONVFACTOR;
 }

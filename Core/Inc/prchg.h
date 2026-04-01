@@ -11,13 +11,22 @@
 #include "stdbool.h"
 #include "fdcan.h"
 #include "gpio.h"
+#include "tim.h"
+#include "vcu_state.h"
 
-extern FDCAN_TxHeaderTypeDef PRCHG_TxHeader;
-extern uint8_t PRCHG_TxData[1];
-extern bool inverter_precharged;
+#define PRECHARGE_TIMEOUT_MS 6000
+
+typedef enum {
+    PRECHARGE_IDLE = 0,
+    PRECHARGE_WAITING,
+    PRECHARGE_SUCCESS,
+    PRECHARGE_FAILURE,
+	PRECHARGE_TIMEOUT,
+} PrechargeState;
 
 void configurePrechargeMessage();
 void sendPrechargeRequest();
 void processPrechargeResponse();
+void checkPrechargeStatus();
 
 #endif /* INC_PRCHG_H_ */

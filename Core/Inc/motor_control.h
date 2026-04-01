@@ -8,6 +8,7 @@
 #ifndef INC_MOTOR_CONTROL_H_
 #define INC_MOTOR_CONTROL_H_
 
+#include "vcu_state.h"
 #include "fdcan.h"
 #include "stdint.h"
 #include "stdbool.h"
@@ -37,21 +38,24 @@
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30
 
-extern FDCAN_TxHeaderTypeDef Inverter_TxHeader;
-extern uint8_t Inverter_TxData[8];
+#define INVERTER_VOLTAGE_THRESHOLD 60
+
 extern uint16_t ADC_VAL[3];
 extern float voltage_values[3];
 extern float pedal_percents[3];
 extern float requestedTorque;
 
-extern bool apps_plausible;
-extern uint32_t millis_since_apps_implausible;
-extern bool bse_plausible;
-extern uint32_t millis_since_bse_implausible;
-extern bool crosscheck_plausible;
-extern float inverter_diagnostics_rpm;
-extern float inverter_diagnostics_voltage;
-extern float inverter_diagnostics_carspeed;
+typedef struct PlausibilityChecks {
+	bool apps_plausible;
+	bool bse_plausible;
+	bool crosscheck_plausible;
+} PlausibilityChecks;
+
+typedef struct InverterDiagnostics {
+	float inverter_rpm;
+	float inverter_voltage;
+	float inverter_carspeed;
+} InverterDiagnostics;
 
 void configureInverterMessage();
 void calculateTorqueRequest();
@@ -61,6 +65,5 @@ void checkAPPS_BSE_Crosscheck();
 void sendTorqueRequest(int requestedTorque);
 void processInverter_Voltage();
 void processInverter_RPM();
-void stopMotor();
 
 #endif /* INC_MOTOR_CONTROL_H_ */

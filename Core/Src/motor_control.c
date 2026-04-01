@@ -7,21 +7,18 @@
 
 #include "motor_control.h"
 
-FDCAN_TxHeaderTypeDef Inverter_TxHeader;
-uint8_t Inverter_TxData[8];
+static FDCAN_TxHeaderTypeDef Inverter_TxHeader;
+static uint8_t Inverter_TxData[8];
+
 uint16_t ADC_VAL[3];
 float voltage_values[3];
 float pedal_percents[3];
 float requestedTorque;
-float inverter_diagnostics_rpm;
-float inverter_diagnostics_voltage;
-float inverter_diagnostics_carspeed;
 
-bool apps_plausible = true;
-uint32_t millis_since_apps_implausible;
-bool bse_plausible = true;
-uint32_t millis_since_bse_implausible;
-bool crosscheck_plausible = true;
+static InverterDiagnostics inverter_diagnostics;
+static PlausibilityChecks plausibility_checks;
+static uint32_t millis_since_apps_implausible;
+static uint32_t millis_since_bse_implausible;
 
 void configureInverterMessage() {
 	Inverter_TxHeader.Identifier = INVERTER_TORQUE_REQUEST_TX_ID;
@@ -45,7 +42,13 @@ void calculateTorqueRequest() {
 			requestedTorque = MAX_TORQUE;
 		}
 	} else {
-		// TODO: REGEN BRAKING!
+		if (inverter_diagnostics.inverter_carspeed < 5.0f) {
+			requestedTorque = 0;
+		} else {
+			requestedTorque = (REGEN_MAX_TORQUE - REGEN_BASELINE_TORQUE) *
+					((APPS_INFLECTION_PERCENT - apps_percent_average)
+							/ APPS_INFLECTION_PERCENT);
+		}
 	}
 }
 
@@ -53,18 +56,18 @@ void checkAPPS_Plausibility() {
 	float pedal_travel_difference_percent = fabsf(pedal_percents[0] - pedal_percents[1]);
 	bool apps_invalid = (pedal_travel_difference_percent > APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE);
 
-	if (apps_plausible == true && apps_invalid == true) {
+	if (plausibility_checks.apps_plausible == true && apps_invalid == true) {
 		millis_since_apps_implausible = HAL_GetTick();
-		apps_plausible = false;
+		plausibility_checks.apps_plausible = false;
 	}
 
-	if (apps_plausible == false) {
+	if (plausibility_checks.apps_plausible == false) {
 		if ((HAL_GetTick() - millis_since_apps_implausible) > APPS_IMPLAUSIBILITY_TIMEOUT_MS) {
 			requestedTorque = 0;
 		}
 
 		if (apps_invalid == false) {
-			apps_plausible = true;
+			plausibility_checks.apps_plausible = true;
 		}
 	}
 }
@@ -72,18 +75,18 @@ void checkAPPS_Plausibility() {
 void checkBSE_Plausibility() {
 	bool bse_invalid = (pedal_percents[2] > 1.0f || pedal_percents[2] < 0.0f);
 
-	if (bse_plausible && bse_invalid) {
+	if (plausibility_checks.bse_plausible && bse_invalid) {
 		millis_since_bse_implausible = HAL_GetTick();
-	    bse_plausible = false;
+	    plausibility_checks.bse_plausible = false;
 	}
 
-	if (bse_plausible == false) {
+	if (plausibility_checks.bse_plausible == false) {
 		if ((HAL_GetTick() - millis_since_bse_implausible) > BSE_IMPLAUSIBILITY_TIMEOUT_MS) {
 	        requestedTorque = 0;
 		}
 
 	    if (bse_invalid == false) {
-	        bse_plausible = true;
+	        plausibility_checks.bse_plausible = true;
 	    }
 	}
 }
@@ -91,16 +94,16 @@ void checkBSE_Plausibility() {
 void checkAPPS_BSE_Crosscheck() {
 	float apps_percent_average = (pedal_percents[0] + pedal_percents[1])/2;
 
-	if (crosscheck_plausible == true &&
+	if (plausibility_checks.crosscheck_plausible == true &&
 			(apps_percent_average > CROSSCHECK_IMPLAUSIBILITY_PERCENT_DIFFERENCE)
 			&& (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD)) {
-		crosscheck_plausible = false;
+		plausibility_checks.crosscheck_plausible = false;
 		requestedTorque = 0;
 	}
 
-	if (crosscheck_plausible == false) {
+	if (plausibility_checks.crosscheck_plausible == false) {
 		if (apps_percent_average <= CROSSCHECK_RESTORATION_APPS_PERCENT) {
-			crosscheck_plausible = true; // CLEAR FAULT
+			plausibility_checks.crosscheck_plausible = true; // CLEAR FAULT
 		} else {
 			requestedTorque = 0; // KEEP MOTOR SHUT DOWN
 		}
@@ -120,22 +123,22 @@ void sendTorqueRequest(int requestedTorque_i) {
 	Inverter_TxData[6] = 0; // Default Torque Limits in EEPROM
 	Inverter_TxData[7] = 0; // Default Torque Limits in EEPROM
 
-	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader, Inverter_TxData) != HAL_OK) {
-		// HANDLE CAN FAILURE!
-	}
-
+	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader, Inverter_TxData);
 }
 
 void processInverter_Voltage() {
 	int16_t inverter_dc_volts_raw = (int16_t) ((RxData1[1] << 8)
 				| RxData1[0]);  // Little-endian
-	inverter_diagnostics_voltage = inverter_dc_volts_raw * 0.1f;
-	// TODO: Process voltage dropping below certain threshold
+	inverter_diagnostics.inverter_voltage = inverter_dc_volts_raw * 0.1f;
+	if (inverter_diagnostics.inverter_voltage < INVERTER_VOLTAGE_THRESHOLD &&
+			inverter_precharged == true) {
+		exitDriveMode();
+	}
 }
 
 void processInverter_RPM() {
-	inverter_diagnostics_rpm = (float) (RxData1[2]
+	inverter_diagnostics.inverter_rpm = (float) (RxData1[2]
 				| (RxData1[3] << 8));
-	inverter_diagnostics_carspeed = (float) (inverter_diagnostics_rpm)
+	inverter_diagnostics.inverter_carspeed = (float) (inverter_diagnostics.inverter_rpm)
 				* RPM_TO_CARSPEED_CONVFACTOR;
 }

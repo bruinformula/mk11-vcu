@@ -1,3 +1,4 @@
-../Core/Src/prchg.c:17:6:configurePrechargeMessage	1
-../Core/Src/prchg.c:29:6:sendPrechargeRequest	1
-../Core/Src/prchg.c:40:6:processPrechargeResponse	1
+../Core/Src/prchg.c:15:6:configurePrechargeMessage	1
+../Core/Src/prchg.c:29:6:sendPrechargeRequest	3
+../Core/Src/prchg.c:39:6:processPrechargeResponse	3
+../Core/Src/prchg.c:52:6:checkPrechargeStatus	2

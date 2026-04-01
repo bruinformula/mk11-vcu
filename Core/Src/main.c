@@ -30,8 +30,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "motor_control.h"
+#include "audio.h"
 #include "prchg.h"
-#include "startup_sound.h"
+#include "vcu_state.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,28 +48,11 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
-#define WAV_HEADER_SIZE 44
-#define WAV_DATA_SIZE (startup_sound_len - WAV_HEADER_SIZE)
-#define TOTAL_HALFWORDS (WAV_DATA_SIZE / 2)
-#define CHUNK_SIZE_HALFWORDS 4096U
-#define TEST_TONE_FRAME_COUNT 4410U
-#define TEST_TONE_CHANNEL_COUNT 2U
-#define TEST_TONE_HALFWORD_COUNT                                             \
-  (TEST_TONE_FRAME_COUNT * TEST_TONE_CHANNEL_COUNT)
-#define TEST_TONE_PERIOD_FRAMES 44U
-#define BOOT_AUDIO_SELFTEST 0U
-#define DIRECT_RTD_AUDIO_BUTTON 1U
-#define AUDIO_RETRIGGER_GUARD_MS 750U
-#define RTD_VOLUME_SHIFT 2U
-#define TEST_TONE_HIGH_SAMPLE ((uint16_t)0x1000)
-#define TEST_TONE_LOW_SAMPLE ((uint16_t)0xF000)
-
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
 int fdcan1_debug_cb = 0;
 int fdcan2_debug_cb = 0;
 
@@ -85,54 +69,6 @@ volatile bool prchg_button_pressed;
 
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
-
-bool ready_to_drive;
-
-typedef struct DebugStats_t{
-    // I2S state + error info
-    uint32_t i2s_state;
-    uint32_t i2s_error;
-    uint32_t i2s_error_cb_hit;
-
-    // Clock + peripheral debug
-    uint32_t spi123_clock_source;
-    uint32_t spi123_clock_hz;
-
-    // Raw register snapshots
-    uint32_t spi2_cr1;
-    uint32_t spi2_i2scfgr;
-
-    // Playback tracking
-    uint32_t playback_kind;          // 1 = test tone, 2 = RTD sound
-    uint32_t playback_started;
-    uint32_t playback_finished;
-
-    // Wave progress
-    uint32_t wave_halfword_count;
-    uint32_t wave_halfword_position;
-
-    // I2S transmission stats
-    uint32_t i2s_tx_hit;             // Tx complete callback hits
-    uint32_t last_i2s_status;
-
-    // DMA control/debug
-    uint32_t last_dma_stop_status;
-} DebugStats_t;
-
-DebugStats_t debug;
-static uint32_t wavPos = 0;
-static const uint16_t *wavePCM = NULL;
-static uint32_t halfwordCount = 0;
-static uint8_t waveFinished = 0;
-static uint16_t testToneBuffer[TEST_TONE_HALFWORD_COUNT];
-static uint16_t scaledPlaybackBuffer[CHUNK_SIZE_HALFWORDS];
-static bool testToneInitialized = false;
-static bool setReadyToDriveOnPlaybackComplete = false;
-static uint32_t lastPlaybackStartTick = 0;
-static bool hasStartedPlayback = false;
-static bool scalePlaybackSamples = false;
-
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -144,191 +80,13 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void fillTestToneBuffer(void) {
-  if (testToneInitialized) {
-    return;
-  }
-
-  for (uint32_t frame = 0; frame < TEST_TONE_FRAME_COUNT; frame++) {
-    uint16_t sample =
-        ((frame % TEST_TONE_PERIOD_FRAMES) < (TEST_TONE_PERIOD_FRAMES / 2U))
-            ? TEST_TONE_HIGH_SAMPLE
-            : TEST_TONE_LOW_SAMPLE;
-    uint32_t offset = frame * TEST_TONE_CHANNEL_COUNT;
-
-    testToneBuffer[offset] = sample;
-    testToneBuffer[offset + 1U] = sample;
-  }
-
-  testToneInitialized = true;
-}
-
-static void captureI2SDebugState(void) {
-  debug.i2s_state = HAL_I2S_GetState(&hi2s2);
-  debug.i2s_error = HAL_I2S_GetError(&hi2s2);
-  debug.spi123_clock_source = __HAL_RCC_GET_SPI123_SOURCE();
-  debug.spi123_clock_hz = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI123);
-  debug.spi2_cr1 = hi2s2.Instance->CR1;
-  debug.spi2_i2scfgr = hi2s2.Instance->I2SCFGR;
-}
-
-static bool audioPlaybackAllowed(void) {
-  uint32_t now = HAL_GetTick();
-  if (hasStartedPlayback &&
-      (now - lastPlaybackStartTick) < AUDIO_RETRIGGER_GUARD_MS) {
-    return false;
-  }
-
-  lastPlaybackStartTick = now;
-  hasStartedPlayback = true;
-  return true;
-}
-
-static uint16_t *preparePlaybackChunk(const uint16_t *source, uint16_t count) {
-  if (!scalePlaybackSamples) {
-    return (uint16_t *)source;
-  }
-
-  for (uint16_t i = 0; i < count; i++) {
-    int16_t sample = (int16_t)source[i];
-    scaledPlaybackBuffer[i] = (uint16_t)(sample >> RTD_VOLUME_SHIFT);
-  }
-
-  return scaledPlaybackBuffer;
-}
-
-void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
-  debug.i2s_tx_hit++;
-  if (hi2s->Instance == SPI2 && !waveFinished) {
-    // finished one chunk
-    if (wavPos < halfwordCount) {
-      // Start the next chunk
-      uint32_t remain = halfwordCount - wavPos;
-      uint16_t thisChunk = (remain > CHUNK_SIZE_HALFWORDS)
-                               ? CHUNK_SIZE_HALFWORDS
-                               : (uint16_t)remain;
-      const uint16_t *chunkPtr = wavePCM + wavPos;
-      wavPos += thisChunk;
-      debug.wave_halfword_position = wavPos;
-
-      HAL_I2S_Transmit_DMA(&hi2s2, preparePlaybackChunk(chunkPtr, thisChunk),
-                           thisChunk);
-    } else {
-      // entire wave is done
-      waveFinished = 1;
-      lastPlaybackStartTick = HAL_GetTick();
-      debug.playback_finished++;
-      debug.wave_halfword_position = halfwordCount;
-      if (setReadyToDriveOnPlaybackComplete) {
-        ready_to_drive = true;
-        setReadyToDriveOnPlaybackComplete = false;
-      }
-    }
-  }
-}
-
-void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s) {
-  if (hi2s->Instance == SPI2) {
-    debug.i2s_error_cb_hit++;
-    captureI2SDebugState();
-  }
-}
-
-void playReadyToDriveSound() {
-  if (HAL_I2S_GetState(&hi2s2) != HAL_I2S_STATE_READY ||
-      !audioPlaybackAllowed()) {
-    return; // Avoid re-triggering if busy
-  }
-
-  setReadyToDriveOnPlaybackComplete = true;
-  scalePlaybackSamples = true;
-  debug.playback_kind = 2;
-  debug.playback_started++;
-  wavePCM = (const uint16_t *)(&startup_sound[WAV_HEADER_SIZE]);
-  halfwordCount = TOTAL_HALFWORDS;
-  wavPos = 0;
-  waveFinished = 0;
-  debug.wave_halfword_count = halfwordCount;
-  debug.wave_halfword_position = 0;
-
-  while (wavPos < halfwordCount) {
-    uint32_t remain = halfwordCount - wavPos;
-    uint16_t thisChunk =
-        (remain > CHUNK_SIZE_HALFWORDS) ? CHUNK_SIZE_HALFWORDS
-                                        : (uint16_t)remain;
-    const uint16_t *chunkPtr = wavePCM + wavPos;
-
-    debug.last_i2s_status =
-        HAL_I2S_Transmit(&hi2s2, preparePlaybackChunk(chunkPtr, thisChunk),
-                         thisChunk, 1000);
-    captureI2SDebugState();
-    if (debug.last_i2s_status != HAL_OK) {
-      return;
-    }
-
-    wavPos += thisChunk;
-    debug.wave_halfword_position = wavPos;
-  }
-
-  waveFinished = 1;
-  lastPlaybackStartTick = HAL_GetTick();
-  debug.playback_finished++;
-  debug.wave_halfword_position = halfwordCount;
-  ready_to_drive = true;
-  setReadyToDriveOnPlaybackComplete = false;
-}
-
-void testSpeaker() {
-  if (!audioPlaybackAllowed()) {
-    return;
-  }
-
-  if (HAL_I2S_GetState(&hi2s2) != HAL_I2S_STATE_READY) {
-    captureI2SDebugState();
-    if (debug.i2s_state == HAL_I2S_STATE_BUSY ||
-        debug.i2s_state == HAL_I2S_STATE_BUSY_TX ||
-        debug.i2s_state == HAL_I2S_STATE_BUSY_TX_RX) {
-      debug.last_dma_stop_status = HAL_I2S_DMAStop(&hi2s2);
-    }
-
-    captureI2SDebugState();
-    if (debug.i2s_state != HAL_I2S_STATE_READY) {
-      return;
-    }
-  }
-
-  setReadyToDriveOnPlaybackComplete = false;
-  scalePlaybackSamples = false;
-  debug.playback_kind = 1;
-  debug.playback_started++;
-  wavePCM = testToneBuffer;
-  halfwordCount = TEST_TONE_HALFWORD_COUNT;
-  wavPos = 0;
-  waveFinished = 0;
-  debug.wave_halfword_count = halfwordCount;
-  debug.wave_halfword_position = 0;
-
-  uint32_t remain = halfwordCount - wavPos;
-  uint16_t thisChunk =
-      (remain > CHUNK_SIZE_HALFWORDS) ? CHUNK_SIZE_HALFWORDS : (uint16_t)remain;
-  const uint16_t *chunkPtr = wavePCM + wavPos;
-  wavPos += thisChunk;
-  debug.wave_halfword_position = wavPos;
-
-  debug.last_i2s_status =
-      HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t *)chunkPtr, thisChunk);
-  captureI2SDebugState();
-}
-
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-	// Conversions for debugging purposes; probe the inputs on VCU PCB and compare to live expressions
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 1.65V)
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 2.24V)
 
 	if (ready_to_drive == true && inverter_precharged == true) {
 		// IN DRIVE MODE!
-
 		pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
 		pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
 		pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
@@ -345,17 +103,17 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BMS_FAULT_Pin) {
 		bms_fault = true;
-//		// TODO
+		exitDriveMode();
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
 		imd_fault = true;
-		// TODO
+		exitDriveMode();
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
 		bspd_fault = true;
-		// TODO
+		exitDriveMode();
 	}
 
 	if (GPIO_Pin == RTD_BTN_Pin) {
@@ -387,28 +145,25 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
-
     	if (prchg_button_pressed == true) {
-    		configurePrechargeMessage();
     		sendPrechargeRequest();
-
-    		// THIS IS FOR DEBUGGING/TESTING TO "SKIP" ACTUAL PRECHARGE
-    		// COMMENT OUT WHEN CAN IS BEING USED
-    		inverter_precharged = true;
     	}
+    }
 
+    if (htim->Instance == TIM2) {
     	if (rtd_button_pressed == true) {
-
-    		if (inverter_precharged == false) {
-    			return;
-    		}
+    		if (inverter_precharged == false) return;
 
     		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
-    			playReadyToDriveSound(); // Sets ready_to_drive = true once I2S data stream is complete
-    		} else {
-    			ready_to_drive = false;
+    			playReadyToDriveSound();
+    			enterDriveMode();
     		}
     	}
+    }
+
+    if (htim->Instance == TIM3) {
+    	HAL_TIM_Base_Stop_IT(&htim3);
+    	checkPrechargeStatus();
     }
 }
 
@@ -488,6 +243,8 @@ int main(void)
   MX_FDCAN2_Init();
   MX_TIM1_Init();
   MX_I2S2_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
   // FDCAN1 FILTER SETUP
@@ -545,7 +302,6 @@ int main(void)
 
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */

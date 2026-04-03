@@ -37,8 +37,9 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Core/Inc/adc.h ../Core/Inc/main.h ../Core/Inc/dma.h \
  ../Core/Inc/fdcan.h ../Core/Inc/i2s.h ../Core/Inc/tim.h \
  ../Core/Inc/gpio.h ../Core/Inc/motor_control.h ../Core/Inc/vcu_state.h \
- ../Core/Inc/gpio.h ../Core/Inc/fdcan.h ../Core/Inc/audio.h \
- ../Core/Inc/i2s.h ../Core/Inc/prchg.h ../Core/Inc/tim.h \
+ ../Core/Inc/motor_control.h ../Core/Inc/prchg.h ../Core/Inc/fdcan.h \
+ ../Core/Inc/gpio.h ../Core/Inc/tim.h ../Core/Inc/adc.h \
+ ../Core/Inc/audio.h ../Core/Inc/i2s.h ../Core/Inc/prchg.h \
  ../Core/Inc/vcu_state.h
 ../Core/Inc/main.h:
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h:
@@ -85,10 +86,13 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/gpio.h:
 ../Core/Inc/motor_control.h:
 ../Core/Inc/vcu_state.h:
-../Core/Inc/gpio.h:
+../Core/Inc/motor_control.h:
+../Core/Inc/prchg.h:
 ../Core/Inc/fdcan.h:
+../Core/Inc/gpio.h:
+../Core/Inc/tim.h:
+../Core/Inc/adc.h:
 ../Core/Inc/audio.h:
 ../Core/Inc/i2s.h:
 ../Core/Inc/prchg.h:
-../Core/Inc/tim.h:
 ../Core/Inc/vcu_state.h:

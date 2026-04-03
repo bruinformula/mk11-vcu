@@ -24,7 +24,7 @@
 #define BOOT_AUDIO_SELFTEST 0U
 #define DIRECT_RTD_AUDIO_BUTTON 1U
 #define AUDIO_RETRIGGER_GUARD_MS 750U
-#define RTD_VOLUME_SHIFT 0U
+#define RTD_VOLUME_SHIFT 2U
 #define TEST_TONE_HIGH_SAMPLE ((uint16_t)0x1000)
 #define TEST_TONE_LOW_SAMPLE ((uint16_t)0xF000)
 
@@ -63,7 +63,7 @@ void fillTestToneBuffer();
 void captureI2SDebugState();
 bool audioPlaybackAllowed();
 uint16_t *preparePlaybackChunk(const uint16_t *source, uint16_t count);
-void playReadyToDriveSound();
+bool playReadyToDriveSound();
 void testSpeaker();
 
 #endif /* INC_AUDIO_H_ */

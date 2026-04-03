@@ -64,9 +64,6 @@ volatile bool bms_fault;
 volatile bool imd_fault;
 volatile bool bspd_fault;
 
-volatile bool rtd_button_pressed;
-volatile bool prchg_button_pressed;
-
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
 /* USER CODE END PV */
@@ -85,50 +82,52 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 2.24V)
 
-	if (ready_to_drive == true && inverter_precharged == true) {
-		// IN DRIVE MODE!
-		pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
-		pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
-		pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
+	if (vcu_state != VCU_DRIVE) return;
 
-		calculateTorqueRequest();
-		checkAPPS_Plausibility();
-		checkBSE_Plausibility();
-		checkAPPS_BSE_Crosscheck();
-		sendTorqueRequest( (int)(requestedTorque*10) );
-	}
+	pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
+	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
+	pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
 
+	calculateTorqueRequest();
+	checkAPPS_Plausibility();
+	checkBSE_Plausibility();
+	checkAPPS_BSE_Crosscheck();
+	sendTorqueRequest( (int)(requestedTorque*10) );
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-		bms_fault = true;
-		exitDriveMode();
+		if (HAL_GPIO_ReadPin(BMS_FAULT_GPIO_Port, BMS_FAULT_Pin) == GPIO_PIN_SET) {
+			bms_fault = true;
+			faultVCU();
+		} else {
+			bms_fault = false;
+			if (!bspd_fault && !imd_fault && !bms_fault) {
+				resetVCU();
+			}
+		}
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
 		imd_fault = true;
-		exitDriveMode();
+		precharge_state = PRECHARGE_IDLE;
+		vcu_state = VCU_IMD_FAULT;
+		Error_Handler();
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
-		bspd_fault = true;
-		exitDriveMode();
-	}
-
-	if (GPIO_Pin == RTD_BTN_Pin) {
-		rtd_debug++;
-		if (HAL_GPIO_ReadPin(RTD_BTN_GPIO_Port, RTD_BTN_Pin) == GPIO_PIN_SET) {
-			rtd_button_pressed = true;
-            __HAL_TIM_SET_COUNTER(&htim1, 0);
-            HAL_TIM_Base_Start_IT(&htim1);
+		if (HAL_GPIO_ReadPin(BSPD_FAULT_GPIO_Port, BSPD_FAULT_Pin) == GPIO_PIN_RESET) {
+			bspd_fault = true;
+			faultVCU();
 		} else {
-			// Button Released!
-			rtd_button_pressed = false;
-            HAL_TIM_Base_Stop_IT(&htim1);
+			bspd_fault = false;
+			if (!bspd_fault && !imd_fault && !bms_fault) {
+				resetVCU();
+			}
 		}
 	}
 
+	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State
 	if (GPIO_Pin == PRCHG_BTN_Pin) {
 		prchg_debug++;
 		if (HAL_GPIO_ReadPin(PRCHG_BTN_GPIO_Port, PRCHG_BTN_Pin) == GPIO_PIN_SET) {
@@ -141,22 +140,51 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		    HAL_TIM_Base_Stop_IT(&htim1);
 		}
 	}
+
+	if (GPIO_Pin == RTD_BTN_Pin) {
+		rtd_debug++;
+		if (HAL_GPIO_ReadPin(RTD_BTN_GPIO_Port, RTD_BTN_Pin) == GPIO_PIN_SET) {
+			rtd_button_pressed = true;
+            __HAL_TIM_SET_COUNTER(&htim2, 0);
+            HAL_TIM_Base_Start_IT(&htim2);
+		} else {
+			// Button Released!
+			rtd_button_pressed = false;
+            HAL_TIM_Base_Stop_IT(&htim2);
+		}
+	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
     	if (prchg_button_pressed == true) {
+    		HAL_TIM_Base_Stop_IT(&htim1);
+    		if (vcu_state != VCU_IDLE) return;
     		sendPrechargeRequest();
     	}
     }
 
     if (htim->Instance == TIM2) {
     	if (rtd_button_pressed == true) {
-    		if (inverter_precharged == false) return;
+    		HAL_TIM_Base_Stop_IT(&htim2);
+    		if (vcu_state != VCU_PRECHARGED) return;
 
     		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
-    			playReadyToDriveSound();
-    			enterDriveMode();
+    			// ATTEMPT TO ENTER DRIVE MODE
+    			HAL_ADC_Stop_DMA(&hadc3);
+    			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+    			rtd_button_pressed = false; // Clamp button state
+    			prchg_button_pressed = false; // Clamp button state
+    			bool sound_success = playReadyToDriveSound(); // vcu_state is set to VCU_DRIVE here
+
+    			if (!sound_success) {
+        			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+        			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
+        			return;
+    			}
+
+    			vcu_state = VCU_DRIVE;
+    			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
     		}
     	}
     }
@@ -217,7 +245,7 @@ int main(void)
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
-  MPU_Config();
+   MPU_Config();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -232,7 +260,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+//  HAL_Delay(30000);
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -302,6 +330,7 @@ int main(void)
 
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -415,9 +444,9 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
   HAL_I2S_DMAStop(&hi2s2);
   HAL_ADC_Stop_DMA(&hadc3);
+  __disable_irq();
 
   while (1)
   {

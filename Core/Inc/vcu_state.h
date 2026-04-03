@@ -9,16 +9,24 @@
 #define INC_VCU_STATE_H_
 
 #include "stdbool.h"
+#include "motor_control.h"
+#include "prchg.h"
 #include "gpio.h"
+#include "adc.h"
 
 typedef enum {
-	VCU_STATE_PRE_RTD = 0,
-	VCU_STATE_DRIVE,
+	VCU_IDLE = 0,
+	VCU_PRECHARGED,
+	VCU_DRIVE,
+	VCU_FAULT,
+	VCU_IMD_FAULT,
+	VCU_CAN_FAULT
 } VCU_STATE;
-extern bool ready_to_drive;
-extern bool inverter_precharged;
+extern volatile VCU_STATE vcu_state;
+extern volatile bool rtd_button_pressed;
+extern volatile bool prchg_button_pressed;
 
-void enterDriveMode();
-void exitDriveMode();
+void resetVCU();
+void faultVCU();
 
 #endif /* INC_VCU_STATE_H_ */

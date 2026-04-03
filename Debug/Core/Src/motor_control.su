@@ -1,8 +1,9 @@
-../Core/Src/motor_control.c:23:6:configureInverterMessage	4	static
-../Core/Src/motor_control.c:35:6:calculateTorqueRequest	16	static
-../Core/Src/motor_control.c:55:6:checkAPPS_Plausibility	16	static
-../Core/Src/motor_control.c:75:6:checkBSE_Plausibility	16	static
-../Core/Src/motor_control.c:94:6:checkAPPS_BSE_Crosscheck	16	static
-../Core/Src/motor_control.c:113:6:sendTorqueRequest	24	static
-../Core/Src/motor_control.c:129:6:processInverter_Voltage	16	static
-../Core/Src/motor_control.c:139:6:processInverter_RPM	4	static
+../Core/Src/motor_control.c:24:6:configureInverterMessage	4	static
+../Core/Src/motor_control.c:36:6:calculateTorqueRequest	16	static
+../Core/Src/motor_control.c:56:6:checkAPPS_Plausibility	16	static
+../Core/Src/motor_control.c:76:6:checkBSE_Plausibility	16	static
+../Core/Src/motor_control.c:95:6:checkAPPS_BSE_Crosscheck	16	static
+../Core/Src/motor_control.c:114:6:sendTorqueRequest	24	static
+../Core/Src/motor_control.c:131:6:processInverter_Voltage	16	static
+../Core/Src/motor_control.c:141:6:processInverter_RPM	4	static
+../Core/Src/motor_control.c:148:6:resetPlausibilityChecks	4	static

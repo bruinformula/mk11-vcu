@@ -16,7 +16,8 @@ float pedal_percents[3];
 float requestedTorque;
 
 static InverterDiagnostics inverter_diagnostics;
-static PlausibilityChecks plausibility_checks;
+
+PlausibilityChecks plausibility_checks;
 static uint32_t millis_since_apps_implausible;
 static uint32_t millis_since_bse_implausible;
 
@@ -126,13 +127,14 @@ void sendTorqueRequest(int requestedTorque_i) {
 	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader, Inverter_TxData);
 }
 
+// TODO: NEED TO TEST
 void processInverter_Voltage() {
 	int16_t inverter_dc_volts_raw = (int16_t) ((RxData1[1] << 8)
 				| RxData1[0]);  // Little-endian
 	inverter_diagnostics.inverter_voltage = inverter_dc_volts_raw * 0.1f;
 	if (inverter_diagnostics.inverter_voltage < INVERTER_VOLTAGE_THRESHOLD &&
-			inverter_precharged == true) {
-		exitDriveMode();
+			(vcu_state == VCU_PRECHARGED || vcu_state == VCU_DRIVE)) {
+		resetVCU();
 	}
 }
 
@@ -141,4 +143,10 @@ void processInverter_RPM() {
 				| (RxData1[3] << 8));
 	inverter_diagnostics.inverter_carspeed = (float) (inverter_diagnostics.inverter_rpm)
 				* RPM_TO_CARSPEED_CONVFACTOR;
+}
+
+void resetPlausibilityChecks() {
+	plausibility_checks.apps_plausible = false;
+	plausibility_checks.bse_plausible = false;
+	plausibility_checks.crosscheck_plausible = false;
 }

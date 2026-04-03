@@ -1,2 +1,2 @@
-../Core/Src/vcu_state.c:14:6:enterDriveMode	1
-../Core/Src/vcu_state.c:19:6:exitDriveMode	1
+../Core/Src/vcu_state.c:14:6:resetVCU	1
+../Core/Src/vcu_state.c:26:6:faultVCU	1

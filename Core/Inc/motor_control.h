@@ -13,14 +13,14 @@
 #include "stdint.h"
 #include "stdbool.h"
 
-#define APPS1_ADC_MAX_VAL 2050
+#define APPS1_ADC_MAX_VAL 2060
 #define APPS1_ADC_MIN_VAL 60
 
-#define APPS2_ADC_MAX_VAL 2800
+#define APPS2_ADC_MAX_VAL 2790
 #define APPS2_ADC_MIN_VAL 60
 
-#define BSE_ADC_MAX_VAL 2800
-#define BSE_ADC_MIN_VAL 50
+#define BSE_ADC_MAX_VAL 2780
+#define BSE_ADC_MIN_VAL 80
 
 #define APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.10
 #define APPS_IMPLAUSIBILITY_TIMEOUT_MS 100
@@ -50,6 +50,7 @@ typedef struct PlausibilityChecks {
 	bool bse_plausible;
 	bool crosscheck_plausible;
 } PlausibilityChecks;
+extern PlausibilityChecks plausibility_checks;
 
 typedef struct InverterDiagnostics {
 	float inverter_rpm;
@@ -65,5 +66,6 @@ void checkAPPS_BSE_Crosscheck();
 void sendTorqueRequest(int requestedTorque);
 void processInverter_Voltage();
 void processInverter_RPM();
+void resetPlausibilityChecks();
 
 #endif /* INC_MOTOR_CONTROL_H_ */

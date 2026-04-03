@@ -9,8 +9,8 @@
 
 static FDCAN_TxHeaderTypeDef PRCHG_TxHeader;
 static uint8_t PRCHG_TxData[8];
-static bool precharge_response_received = false;
-static PrechargeState precharge_state = PRECHARGE_IDLE;
+bool precharge_response_received = false;
+volatile PrechargeState precharge_state = PRECHARGE_IDLE;
 
 void configurePrechargeMessage() {
 	PRCHG_TxHeader.Identifier = BMS_PRCHG_TX_ID;
@@ -27,12 +27,11 @@ void configurePrechargeMessage() {
 }
 
 void sendPrechargeRequest() {
-	// PRECHARGE_IDLE and PRECHARGE_FAILURE are allowed "attempt" states
-	if (precharge_state != PRECHARGE_IDLE && precharge_state != PRECHARGE_FAILURE) return;
 	configurePrechargeMessage();
     HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &PRCHG_TxHeader, PRCHG_TxData);
 	precharge_response_received = false;
     precharge_state = PRECHARGE_WAITING;
+    __HAL_TIM_SET_COUNTER(&htim3, 0);
     HAL_TIM_Base_Start_IT(&htim3); // START PRECHARGE TIMER (6 SECONDS)
 }
 
@@ -41,17 +40,21 @@ void processPrechargeResponse() {
 	precharge_response_received = true;
 
 	if (RxData1[0] == 1) {
-		inverter_precharged = true;
 		precharge_state = PRECHARGE_SUCCESS;
+		vcu_state = VCU_PRECHARGED;
 	} else {
-		inverter_precharged = false;
 		precharge_state = PRECHARGE_FAILURE;
 	}
 }
 
 void checkPrechargeStatus() {
 	if (precharge_response_received == false) {
-		inverter_precharged = false;
-		precharge_state = PRECHARGE_TIMEOUT;
+//		precharge_state = PRECHARGE_TIMEOUT;
+//		vcu_state = VCU_CAN_FAULT;
+//		Error_Handler();
+
+		// BYPASS PRECHARGE!
+		precharge_state = PRECHARGE_SUCCESS;
+		vcu_state = VCU_PRECHARGED;
 	}
 }

@@ -7,18 +7,34 @@
 
 #include "vcu_state.h"
 
-static VCU_STATE vcu_state = VCU_STATE_PRE_RTD;
-bool ready_to_drive = false;
-bool inverter_precharged = false;
+volatile VCU_STATE vcu_state = VCU_IDLE;
+volatile bool rtd_button_pressed;
+volatile bool prchg_button_pressed;
 
-void enterDriveMode() {
-	HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Disable RTD + PRCHG Buttons
-	vcu_state = VCU_STATE_DRIVE;
+void resetVCU() {
+	precharge_state = PRECHARGE_IDLE;
+	precharge_response_received = false;
+	vcu_state = VCU_IDLE;
+	rtd_button_pressed = false; // Clamp button state
+	prchg_button_pressed = false; // Clamp button state
+	resetPlausibilityChecks();
+	requestedTorque = 0;
+	HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3); // Start pedals
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); // Re-enable RTD + PRCHG Buttons
 }
 
-void exitDriveMode() {
-	ready_to_drive = false;
-	inverter_precharged = false;
-	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-	vcu_state = VCU_STATE_PRE_RTD;
+void faultVCU() {
+	HAL_ADC_Stop_DMA(&hadc3); // Stop pedals
+	HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Disable RTD + PRCHG Buttons
+	HAL_TIM_Base_Stop_IT(&htim1); // Stop any running timers
+	HAL_TIM_Base_Stop_IT(&htim2);
+	HAL_TIM_Base_Stop_IT(&htim3);
+	resetPlausibilityChecks();
+	precharge_state = PRECHARGE_IDLE;
+	precharge_response_received = false;
+	vcu_state = VCU_FAULT;
+	rtd_button_pressed = false; // Clamp button state
+	prchg_button_pressed = false; // Clamp button state
+	resetPlausibilityChecks();
+	requestedTorque = 0;
 }

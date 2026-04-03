@@ -23,6 +23,8 @@ typedef enum {
     PRECHARGE_FAILURE,
 	PRECHARGE_TIMEOUT,
 } PrechargeState;
+extern volatile PrechargeState precharge_state;
+extern bool precharge_response_received;
 
 void configurePrechargeMessage();
 void sendPrechargeRequest();

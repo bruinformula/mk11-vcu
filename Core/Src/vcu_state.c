@@ -19,6 +19,7 @@ void resetVCU() {
 	prchg_button_pressed = false; // Clamp button state
 	resetPlausibilityChecks();
 	requestedTorque = 0;
+
 	HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3); // Start pedals
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); // Re-enable RTD + PRCHG Buttons
 }
@@ -29,6 +30,7 @@ void faultVCU() {
 	HAL_TIM_Base_Stop_IT(&htim1); // Stop any running timers
 	HAL_TIM_Base_Stop_IT(&htim2);
 	HAL_TIM_Base_Stop_IT(&htim3);
+
 	resetPlausibilityChecks();
 	precharge_state = PRECHARGE_IDLE;
 	precharge_response_received = false;

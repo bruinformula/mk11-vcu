@@ -138,7 +138,7 @@ void processInverter_Voltage() {
 	if (inverter_diagnostics.inverter_voltage < INVERTER_VOLTAGE_THRESHOLD &&
 			(vcu_state == VCU_PRECHARGED || vcu_state == VCU_DRIVE)) {
 		 // COMMENT THIS TO OVERRIDE VOLTAGE MONITORING WHEN TESTING
-		 resetVCU();
+//		 resetVCU();
 	}
 }
 

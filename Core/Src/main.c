@@ -100,10 +100,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-		if (HAL_GPIO_ReadPin(BMS_FAULT_GPIO_Port, BMS_FAULT_Pin) == GPIO_PIN_SET) {
+		if (HAL_GPIO_ReadPin(BMS_FAULT_GPIO_Port, BMS_FAULT_Pin) == GPIO_PIN_RESET) {
+			// BMS_FAULT LOW implies fault
 			bms_fault = true;
 			faultVCU();
 		} else {
+			// BMS_FAULT HIGH implies no fault
 			bms_fault = false;
 			if (!bspd_fault && !imd_fault && !bms_fault) {
 				resetVCU();
@@ -112,6 +114,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
+		// IMD_FAULT HIGH implies fault
 		imd_fault = true;
 		precharge_state = PRECHARGE_IDLE;
 		vcu_state = VCU_IMD_FAULT;
@@ -119,6 +122,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
+		// TODO NEED TO TEST w/ ACTUAL CURRENT SENSOR
 		if (HAL_GPIO_ReadPin(BSPD_FAULT_GPIO_Port, BSPD_FAULT_Pin) == GPIO_PIN_RESET) {
 			bspd_fault = true;
 			faultVCU();
@@ -176,6 +180,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
     			// ATTEMPT TO ENTER DRIVE MODE
+    			// NOTE: Works without disabling/re-enabling CAN?
     			HAL_ADC_Stop_DMA(&hadc3);
     			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
     			rtd_button_pressed = false; // Clamp button state

@@ -41,7 +41,6 @@ void processPrechargeResponse() {
 
 	if (RxData1[0] == 1) {
 		precharge_state = PRECHARGE_SUCCESS;
-		vcu_state = VCU_PRECHARGED;
 	} else {
 		precharge_state = PRECHARGE_FAILURE;
 	}
@@ -52,9 +51,13 @@ void checkPrechargeStatus() {
 		precharge_state = PRECHARGE_TIMEOUT;
 		vcu_state = VCU_CAN_FAULT;
 		Error_Handler();
-
-//		BYPASS PRECHARGE!
-//		precharge_state = PRECHARGE_SUCCESS;
-//		vcu_state = VCU_PRECHARGED;
+	} else {
+		if (precharge_state == PRECHARGE_SUCCESS) {
+			vcu_state = VCU_PRECHARGED;
+		}
 	}
+
+	//  BYPASS PRECHARGE!
+	//  precharge_state = PRECHARGE_SUCCESS;
+	//  vcu_state = VCU_PRECHARGED;
 }

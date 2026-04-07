@@ -92,7 +92,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	checkAPPS_Plausibility();
 	checkBSE_Plausibility();
 	checkAPPS_BSE_Crosscheck();
-	sendTorqueRequest( (int)(requestedTorque*10) );
+
+	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
+		sendTorqueRequest( (int)(requestedTorque*10) );
+	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
@@ -155,6 +158,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 }
 
+// static bool sound_success = true; // RTD SOUND OVERRIDE
+static bool sound_success;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
     	if (prchg_button_pressed == true) {
@@ -175,7 +180,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
     			rtd_button_pressed = false; // Clamp button state
     			prchg_button_pressed = false; // Clamp button state
-    			bool sound_success = playReadyToDriveSound(); // vcu_state is set to VCU_DRIVE here
+    			// COMMENT OUT FOR RTD SOUND OVERRIDE
+    			sound_success = playReadyToDriveSound();
 
     			if (!sound_success) {
         			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -245,7 +251,7 @@ int main(void)
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
-   MPU_Config();
+  MPU_Config();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -260,7 +266,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-//  HAL_Delay(30000);
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -328,6 +334,7 @@ int main(void)
 	  Error_Handler();
   }
 
+  configureInverterMessage();
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
 

@@ -191,7 +191,6 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
       debug.playback_finished++;
       debug.wave_halfword_position = halfwordCount;
       if (setReadyToDriveOnPlaybackComplete) {
-        vcu_state = VCU_DRIVE;
         setReadyToDriveOnPlaybackComplete = false;
       }
     }

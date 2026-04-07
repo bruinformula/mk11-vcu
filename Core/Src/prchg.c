@@ -49,12 +49,12 @@ void processPrechargeResponse() {
 
 void checkPrechargeStatus() {
 	if (precharge_response_received == false) {
-//		precharge_state = PRECHARGE_TIMEOUT;
-//		vcu_state = VCU_CAN_FAULT;
-//		Error_Handler();
+		precharge_state = PRECHARGE_TIMEOUT;
+		vcu_state = VCU_CAN_FAULT;
+		Error_Handler();
 
-		// BYPASS PRECHARGE!
-		precharge_state = PRECHARGE_SUCCESS;
-		vcu_state = VCU_PRECHARGED;
+//		BYPASS PRECHARGE!
+//		precharge_state = PRECHARGE_SUCCESS;
+//		vcu_state = VCU_PRECHARGED;
 	}
 }

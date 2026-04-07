@@ -5,4 +5,4 @@
 ../Core/Src/audio.c:78:6:playReadyToDriveSound	6
 ../Core/Src/audio.c:129:6:testSpeaker	8
 ../Core/Src/audio.c:171:6:HAL_I2S_TxCpltCallback	6
-../Core/Src/audio.c:201:6:HAL_I2S_ErrorCallback	2
+../Core/Src/audio.c:200:6:HAL_I2S_ErrorCallback	2

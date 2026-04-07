@@ -111,6 +111,8 @@ void checkAPPS_BSE_Crosscheck() {
 	}
 }
 
+static HAL_StatusTypeDef TR_CAN_Debug;
+static int torque_requests_sent;
 void sendTorqueRequest(int requestedTorque_i) {
 	uint8_t msg0 = (uint8_t)(requestedTorque_i & 0xFF);
 	uint8_t msg1 = (uint8_t)((requestedTorque_i >> 8) & 0xFF);
@@ -124,17 +126,19 @@ void sendTorqueRequest(int requestedTorque_i) {
 	Inverter_TxData[6] = 0; // Default Torque Limits in EEPROM
 	Inverter_TxData[7] = 0; // Default Torque Limits in EEPROM
 
-	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader, Inverter_TxData);
+	TR_CAN_Debug = HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader, Inverter_TxData);
+	torque_requests_sent++;
 }
 
-// TODO: NEED TO TEST
+// TODO: NEED TO TEST!
 void processInverter_Voltage() {
 	int16_t inverter_dc_volts_raw = (int16_t) ((RxData1[1] << 8)
 				| RxData1[0]);  // Little-endian
 	inverter_diagnostics.inverter_voltage = inverter_dc_volts_raw * 0.1f;
 	if (inverter_diagnostics.inverter_voltage < INVERTER_VOLTAGE_THRESHOLD &&
 			(vcu_state == VCU_PRECHARGED || vcu_state == VCU_DRIVE)) {
-		resetVCU();
+		 // COMMENT THIS TO OVERRIDE VOLTAGE MONITORING WHEN TESTING
+		 resetVCU();
 	}
 }
 

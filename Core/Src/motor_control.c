@@ -130,7 +130,6 @@ void sendTorqueRequest(int requestedTorque_i) {
 	torque_requests_sent++;
 }
 
-// TODO: NEED TO TEST!
 void processInverter_Voltage() {
 	int16_t inverter_dc_volts_raw = (int16_t) ((RxData1[1] << 8)
 				| RxData1[0]);  // Little-endian
@@ -138,7 +137,7 @@ void processInverter_Voltage() {
 	if (inverter_diagnostics.inverter_voltage < INVERTER_VOLTAGE_THRESHOLD &&
 			(vcu_state == VCU_PRECHARGED || vcu_state == VCU_DRIVE)) {
 		 // COMMENT THIS TO OVERRIDE VOLTAGE MONITORING WHEN TESTING
-//		 resetVCU();
+		 resetVCU();
 	}
 }
 

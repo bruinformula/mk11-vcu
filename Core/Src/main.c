@@ -100,38 +100,21 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-		if (HAL_GPIO_ReadPin(BMS_FAULT_GPIO_Port, BMS_FAULT_Pin) == GPIO_PIN_RESET) {
-			// BMS_FAULT LOW implies fault
-			bms_fault = true;
-			faultVCU();
-		} else {
-			// BMS_FAULT HIGH implies no fault
-			bms_fault = false;
-			if (!bspd_fault && !imd_fault && !bms_fault) {
-				resetVCU();
-			}
-		}
+		bms_fault = true;
+		vcu_state = VCU_BMS_FAULT;
+		Error_Handler();
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
-		// IMD_FAULT HIGH implies fault
 		imd_fault = true;
-		precharge_state = PRECHARGE_IDLE;
 		vcu_state = VCU_IMD_FAULT;
 		Error_Handler();
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
-		// TODO NEED TO TEST w/ ACTUAL CURRENT SENSOR
-		if (HAL_GPIO_ReadPin(BSPD_FAULT_GPIO_Port, BSPD_FAULT_Pin) == GPIO_PIN_RESET) {
-			bspd_fault = true;
-			faultVCU();
-		} else {
-			bspd_fault = false;
-			if (!bspd_fault && !imd_fault && !bms_fault) {
-				resetVCU();
-			}
-		}
+		bspd_fault = true;
+		vcu_state = VCU_BSPD_FAULT;
+		Error_Handler();
 	}
 
 	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State

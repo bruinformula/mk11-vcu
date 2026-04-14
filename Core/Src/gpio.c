@@ -58,17 +58,11 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BMS_FAULT_Pin BSPD_FAULT_Pin */
-  GPIO_InitStruct.Pin = BMS_FAULT_Pin|BSPD_FAULT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  /*Configure GPIO pins : BMS_FAULT_Pin IMD_FAULT_Pin BSPD_FAULT_Pin */
+  GPIO_InitStruct.Pin = BMS_FAULT_Pin|IMD_FAULT_Pin|BSPD_FAULT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : IMD_FAULT_Pin */
-  GPIO_InitStruct.Pin = IMD_FAULT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(IMD_FAULT_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);

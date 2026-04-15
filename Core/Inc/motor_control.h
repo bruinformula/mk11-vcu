@@ -63,7 +63,7 @@ void calculateTorqueRequest();
 void checkAPPS_Plausibility();
 void checkBSE_Plausibility();
 void checkAPPS_BSE_Crosscheck();
-void sendTorqueRequest(int requestedTorque);
+void sendTorqueRequest(int requestedTorque, uint8_t inverter_on);
 void processInverter_Voltage();
 void processInverter_RPM();
 void resetPlausibilityChecks();

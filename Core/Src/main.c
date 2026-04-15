@@ -66,6 +66,9 @@ volatile bool bspd_fault;
 
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
+
+uint32_t start_lockout;
+uint32_t last_torque_request_tick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,43 +81,50 @@ static void MPU_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 1.65V)
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 2.24V)
 
 	if (vcu_state != VCU_DRIVE) return;
+	if (HAL_GetTick() - start_lockout < 150) return; // INVERTER LOCKOUT
 
 	pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
 	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
 	pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
 
-	calculateTorqueRequest();
-	checkAPPS_Plausibility();
-	checkBSE_Plausibility();
-	checkAPPS_BSE_Crosscheck();
+//	calculateTorqueRequest();
+//	checkAPPS_Plausibility();
+//	checkBSE_Plausibility();
+//	checkAPPS_BSE_Crosscheck();
+
+	if (HAL_GetTick() - last_torque_request_tick < 1000) return;
 
 	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
-		sendTorqueRequest( (int)(requestedTorque*10) );
+//		sendTorqueRequest( (int)(requestedTorque*10), 1);
+		sendTorqueRequest(0, 1);
+		last_torque_request_tick = HAL_GetTick();
 	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-		bms_fault = true;
-		vcu_state = VCU_BMS_FAULT;
-		Error_Handler();
+		// TODO: IMPLEMENT SOFTWARE DEBOUNCE
+//		bms_fault = true;
+//		vcu_state = VCU_BMS_FAULT;
+//		Error_Handler();
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
-		imd_fault = true;
-		vcu_state = VCU_IMD_FAULT;
-		Error_Handler();
+//		imd_fault = true;
+//		vcu_state = VCU_IMD_FAULT;
+//		Error_Handler();
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
-		bspd_fault = true;
-		vcu_state = VCU_BSPD_FAULT;
-		Error_Handler();
+//		bspd_fault = true;
+//		vcu_state = VCU_BSPD_FAULT;
+//		Error_Handler();
 	}
 
 	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State
@@ -177,7 +187,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         			return;
     			}
 
+    			// Inverter Lockout
+    			for (int i = 0; i < 5; ++i) {
+    				sendTorqueRequest(0, 0);
+    			}
+
     			vcu_state = VCU_DRIVE;
+    			start_lockout = HAL_GetTick();
     			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
     		}
     	}

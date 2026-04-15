@@ -34,7 +34,8 @@ void configureInverterMessage() {
 }
 
 void calculateTorqueRequest() {
-	float apps_percent_average = (pedal_percents[0] + pedal_percents[1])/2;
+//	float apps_percent_average = (pedal_percents[0] + pedal_percents[1])/2;
+	float apps_percent_average = pedal_percents[0];
 	if (apps_percent_average >= APPS_INFLECTION_PERCENT) {
 		requestedTorque = ((float) (MAX_TORQUE - MIN_TORQUE)) *
 				(apps_percent_average - APPS_INFLECTION_PERCENT);
@@ -113,7 +114,7 @@ void checkAPPS_BSE_Crosscheck() {
 
 static HAL_StatusTypeDef TR_CAN_Debug;
 static int torque_requests_sent;
-void sendTorqueRequest(int requestedTorque_i) {
+void sendTorqueRequest(int requestedTorque_i, uint8_t inverter_on) {
 	uint8_t msg0 = (uint8_t)(requestedTorque_i & 0xFF);
 	uint8_t msg1 = (uint8_t)((requestedTorque_i >> 8) & 0xFF);
 
@@ -122,7 +123,7 @@ void sendTorqueRequest(int requestedTorque_i) {
 	Inverter_TxData[2] = 0;
 	Inverter_TxData[3] = 0;
 	Inverter_TxData[4] = 1; // Forward
-	Inverter_TxData[5] = 1; // Inverter On
+	Inverter_TxData[5] = inverter_on; // Inverter Enable (1); Disable (0)
 	Inverter_TxData[6] = 0; // Default Torque Limits in EEPROM
 	Inverter_TxData[7] = 0; // Default Torque Limits in EEPROM
 

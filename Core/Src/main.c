@@ -32,6 +32,7 @@
 #include "motor_control.h"
 #include "audio.h"
 #include "prchg.h"
+#include "cooling.h"
 #include "vcu_state.h"
 /* USER CODE END Includes */
 
@@ -66,6 +67,8 @@ volatile bool bspd_fault;
 
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
+
+volatile uint32_t inverter_lockout_start;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,6 +86,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 2.24V)
 
 	if (vcu_state != VCU_DRIVE) return;
+	if (HAL_GetTick() - inverter_lockout_start < 150) return;
 
 	pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
 	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
@@ -94,7 +98,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	checkAPPS_BSE_Crosscheck();
 
 	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
-		sendTorqueRequest( (int)(requestedTorque*10) );
+		sendTorqueRequest( (int)(requestedTorque*10), 1, 1);
 	}
 }
 
@@ -176,6 +180,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
         			return;
     			}
+
+    			for (int i = 0; i < 5; ++i) {
+    				sendTorqueRequest(0, 1, 0);
+    			}
+    			inverter_lockout_start = HAL_GetTick();
 
     			vcu_state = VCU_DRIVE;
     			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
@@ -323,6 +332,7 @@ int main(void)
   }
 
   configureInverterMessage();
+  configureCoolingCmdMsg();
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
 
@@ -331,7 +341,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-
+	  sendCoolingCmd();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -1,0 +1,7 @@
+../Core/Src/cooling.c:17:6:configureCoolingCmdMsg	4	static
+../Core/Src/cooling.c:29:6:calculateTractiveFanPWM	16	static
+../Core/Src/cooling.c:40:6:calculateTractivePumpPWM	16	static
+../Core/Src/cooling.c:51:6:calculateAccyFanPWM	16	static
+../Core/Src/cooling.c:62:6:processBMS_Temp	16	static
+../Core/Src/cooling.c:68:6:processInverter_Temp	24	static
+../Core/Src/cooling.c:78:6:sendCoolingCmd	16	static

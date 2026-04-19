@@ -23,6 +23,7 @@
 /* USER CODE BEGIN 0 */
 #include "prchg.h"
 #include "motor_control.h"
+#include "cooling.h"
 /* USER CODE END 0 */
 
 FDCAN_HandleTypeDef hfdcan1;
@@ -301,6 +302,15 @@ void FDCAN1_Rx_Handler(void) {
 	case INVERTER_RPM_RX_ID:
 		processInverter_RPM();
 		break;
+
+	case BMS_TEMP_RX_ID:
+		processBMS_Temp();
+		break;
+
+	case INVERTER_TEMP_RX_ID:
+		processInverter_Temp();
+		break;
+
 	}
 }
 

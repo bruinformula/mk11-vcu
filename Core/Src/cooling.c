@@ -14,6 +14,12 @@ static uint8_t last_tractive_fan_pwm;
 static uint8_t last_tractive_pump_pwm;
 static uint8_t last_accy_fan_pwm;
 
+static float bms_avg_temp;
+static float phase_a_temp;
+static float phase_b_temp;
+static float phase_c_temp;
+static float inv_avg_temp;
+
 void configureCoolingCmdMsg() {
 	CoolingCmd_TxHeader.Identifier = VCU_COOLING_CMD_TX_ID;
 	CoolingCmd_TxHeader.IdType = FDCAN_STANDARD_ID;
@@ -27,6 +33,11 @@ void configureCoolingCmdMsg() {
 }
 
 void calculateTractiveFanPWM(float inverter_temp) {
+	if (vcu_state != VCU_DRIVE) {
+		last_accy_fan_pwm = IDLE_TRACTIVE_FAN_PWM;
+		return;
+	}
+
 	if (inverter_temp > INVERTER_TEMP_THRESHOLD_H) {
 		last_tractive_fan_pwm = 100;
 	} else if (inverter_temp < INVERTER_TEMP_THRESHOLD_L) {
@@ -38,6 +49,11 @@ void calculateTractiveFanPWM(float inverter_temp) {
 }
 
 void calculateTractivePumpPWM(float inverter_temp) {
+	if (vcu_state != VCU_DRIVE) {
+		last_accy_fan_pwm = IDLE_TRACTIVE_PUMP_PWM;
+		return;
+	}
+
 	if (inverter_temp > INVERTER_TEMP_THRESHOLD_H) {
 		last_tractive_pump_pwm = 100;
 	} else if (inverter_temp < INVERTER_TEMP_THRESHOLD_L){
@@ -49,6 +65,11 @@ void calculateTractivePumpPWM(float inverter_temp) {
 }
 
 void calculateAccyFanPWM(float bms_temp) {
+	if (vcu_state != VCU_DRIVE) {
+		last_accy_fan_pwm = IDLE_ACCY_FAN_PWM;
+		return;
+	}
+
 	if (bms_temp > BMS_TEMP_THRESHOLD_H) {
 		last_accy_fan_pwm = 100;
 	} else if (bms_temp < BMS_TEMP_THRESHOLD_L) {
@@ -60,18 +81,18 @@ void calculateAccyFanPWM(float bms_temp) {
 }
 
 void processBMS_Temp() {
-	uint16_t avg_temp_raw = (uint16_t)(RxData1[1] << 8) | RxData1[0];
-	float avg_temp = (float)avg_temp_raw/100.0f;
-	calculateAccyFanPWM(avg_temp);
+	uint16_t avg_temp_raw = (uint16_t)(RxData1[3] << 8) | RxData1[2];
+	bms_avg_temp = (float)avg_temp_raw/100.0f;
+	calculateAccyFanPWM(bms_avg_temp);
 }
 
 void processInverter_Temp() {
-	uint16_t phase_a_temp = (uint16_t)(RxData1[1] << 8) | RxData1[0];
-	uint16_t phase_b_temp = (uint16_t)(RxData1[3] << 8) | RxData1[2];
-	uint16_t phase_c_temp = (uint16_t)(RxData1[5] << 8) | RxData1[4];
-	float avg_temp = (float)(phase_a_temp + phase_b_temp + phase_c_temp)/3.0f;
-	calculateTractiveFanPWM(avg_temp);
-	calculateTractivePumpPWM(avg_temp);
+	phase_a_temp = (float)((RxData1[1] << 8) | RxData1[0]) / 10.0f;
+	phase_b_temp = (float)((RxData1[3] << 8) | RxData1[2]) / 10.0f;
+	phase_c_temp = (float)((RxData1[5] << 8) | RxData1[4]) / 10.0f;
+	inv_avg_temp = (phase_a_temp + phase_b_temp + phase_c_temp)/3.0f;
+	calculateTractiveFanPWM(inv_avg_temp);
+	calculateTractivePumpPWM(inv_avg_temp);
 }
 
 static uint32_t last_send_time = 0;

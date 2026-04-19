@@ -34,7 +34,9 @@ Core/Src/cooling.o: ../Core/Src/cooling.c ../Core/Inc/cooling.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr_ex.h \
  ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim.h \
- ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h
+ ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h \
+ ../Core/Inc/vcu_state.h ../Core/Inc/motor_control.h ../Core/Inc/prchg.h \
+ ../Core/Inc/gpio.h ../Core/Inc/tim.h ../Core/Inc/adc.h
 ../Core/Inc/cooling.h:
 ../Core/Inc/fdcan.h:
 ../Core/Inc/main.h:
@@ -73,3 +75,9 @@ Core/Src/cooling.o: ../Core/Src/cooling.c ../Core/Inc/cooling.h \
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr_ex.h:
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim.h:
 ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h:
+../Core/Inc/vcu_state.h:
+../Core/Inc/motor_control.h:
+../Core/Inc/prchg.h:
+../Core/Inc/gpio.h:
+../Core/Inc/tim.h:
+../Core/Inc/adc.h:

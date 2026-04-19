@@ -1,7 +1,7 @@
-../Core/Src/cooling.c:17:6:configureCoolingCmdMsg	1
-../Core/Src/cooling.c:29:6:calculateTractiveFanPWM	3
-../Core/Src/cooling.c:40:6:calculateTractivePumpPWM	3
-../Core/Src/cooling.c:51:6:calculateAccyFanPWM	3
-../Core/Src/cooling.c:62:6:processBMS_Temp	1
-../Core/Src/cooling.c:68:6:processInverter_Temp	1
-../Core/Src/cooling.c:78:6:sendCoolingCmd	2
+../Core/Src/cooling.c:23:6:configureCoolingCmdMsg	1
+../Core/Src/cooling.c:35:6:calculateTractiveFanPWM	4
+../Core/Src/cooling.c:51:6:calculateTractivePumpPWM	4
+../Core/Src/cooling.c:67:6:calculateAccyFanPWM	4
+../Core/Src/cooling.c:83:6:processBMS_Temp	1
+../Core/Src/cooling.c:89:6:processInverter_Temp	1
+../Core/Src/cooling.c:99:6:sendCoolingCmd	2

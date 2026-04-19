@@ -310,7 +310,6 @@ void FDCAN1_Rx_Handler(void) {
 	case INVERTER_TEMP_RX_ID:
 		processInverter_Temp();
 		break;
-
 	}
 }
 

@@ -3,4 +3,4 @@
 ../Core/Src/fdcan.c:131:6:HAL_FDCAN_MspInit	7
 ../Core/Src/fdcan.c:232:6:HAL_FDCAN_MspDeInit	5
 ../Core/Src/fdcan.c:290:6:FDCAN1_Rx_Handler	9
-../Core/Src/fdcan.c:318:6:FDCAN2_Rx_Handler	1
+../Core/Src/fdcan.c:317:6:FDCAN2_Rx_Handler	1

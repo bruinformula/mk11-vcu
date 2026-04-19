@@ -9,6 +9,7 @@
 #define INC_COOLING_H_
 
 #include "fdcan.h"
+#include "vcu_state.h"
 
 typedef union COOLING_CMD_DF {
 	struct __attribute__((packed)) {
@@ -24,7 +25,11 @@ typedef union COOLING_CMD_DF {
 	uint8_t array[8];
 } COOLING_CMD_DF;
 
-#define INVERTER_TEMP_THRESHOLD_L 40
+#define IDLE_TRACTIVE_FAN_PWM 25
+#define IDLE_TRACTIVE_PUMP_PWM 25
+#define IDLE_ACCY_FAN_PWM 25
+
+#define INVERTER_TEMP_THRESHOLD_L 20
 #define INVERTER_TEMP_THRESHOLD_H 80
 #define BMS_TEMP_THRESHOLD_L 20
 #define BMS_TEMP_THRESHOLD_H 60

@@ -123,7 +123,7 @@ void sendTorqueRequest(int requestedTorque_i, uint8_t inverter_on) {
 	Inverter_TxData[1] = msg1;
 	Inverter_TxData[2] = 0;
 	Inverter_TxData[3] = 0;
-	Inverter_TxData[4] = 1; // Forward
+	Inverter_TxData[4] = 0; // Forward
 	Inverter_TxData[5] = inverter_on; // Inverter Enable (1), Inverter Disable (1)
 	Inverter_TxData[6] = 0; // Default Torque Limits in EEPROM
 	Inverter_TxData[7] = 0; // Default Torque Limits in EEPROM

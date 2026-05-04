@@ -36,6 +36,16 @@ void sendPrechargeRequest() {
 }
 
 void processPrechargeResponse() {
+	// If BMS signals precharge loss (0), reset VCU state immediately
+	if (RxData1[0] == 0) {
+		precharge_state = PRECHARGE_IDLE;
+		if (vcu_state == VCU_PRECHARGED || vcu_state == VCU_DRIVE) {
+			vcu_state = VCU_IDLE;
+		}
+		return;
+	}
+
+	// Normal response handling (only if we are waiting for one)
 	if (precharge_state != PRECHARGE_WAITING) return;
 	precharge_response_received = true;
 

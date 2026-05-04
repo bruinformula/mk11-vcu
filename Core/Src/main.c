@@ -195,15 +195,16 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 	fdcan1_debug_cb++;
 	if (RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE)
 	{
+		while (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0) > 0) {
+			if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader1, RxData1) != HAL_OK)
+			{
+				fdcan_rx_error_count++;
+				break;
+			}
 
-		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader1, RxData1) != HAL_OK)
-		{
-			fdcan_rx_error_count++;
-			return;
+			fdcan_rx_count++;
+			FDCAN1_Rx_Handler();
 		}
-
-		fdcan_rx_count++;
-		FDCAN1_Rx_Handler();
 	}
 }
 
@@ -213,15 +214,16 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	fdcan2_debug_cb++;
 	if (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)
 	{
+		while (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO1) > 0) {
+			if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &RxHeader2, RxData2) != HAL_OK)
+			{
+				fdcan_rx_error_count++;
+				break;
+			}
 
-		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &RxHeader2, RxData2) != HAL_OK)
-		{
-			fdcan_rx_error_count++;
-			return;
+			fdcan_rx_count++;
+			FDCAN2_Rx_Handler();
 		}
-
-		fdcan_rx_count++;
-		FDCAN2_Rx_Handler();
 	}
 }
 

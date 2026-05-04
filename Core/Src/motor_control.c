@@ -142,8 +142,8 @@ void processInverter_Voltage() {
 }
 
 void processInverter_RPM() {
-	inverter_diagnostics.inverter_rpm = (float) (RxData1[2]
-				| (RxData1[3] << 8));
+	inverter_diagnostics.inverter_rpm = (float) ((int16_t)(RxData1[2]
+				| (RxData1[3] << 8)));
 	inverter_diagnostics.inverter_carspeed = (float) (inverter_diagnostics.inverter_rpm)
 				* RPM_TO_CARSPEED_CONVFACTOR;
 }

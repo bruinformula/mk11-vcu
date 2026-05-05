@@ -19,21 +19,25 @@
 #define APPS2_ADC_MAX_VAL 840
 #define APPS2_ADC_MIN_VAL 2550
 
+#define APPS2_BYPASS 0U
+
+#define BSE_BYPASS 0U
+
 #define BSE_ADC_MAX_VAL 500
-#define BSE_ADC_MIN_VAL 410
+#define BSE_ADC_MIN_VAL 400
 
 #define APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.10
 #define APPS_IMPLAUSIBILITY_TIMEOUT_MS 100
 #define APPS_INFLECTION_PERCENT 0.05
 
 #define BSE_IMPLAUSIBILITY_TIMEOUT_MS 100
-#define BSE_ACTIVATED_ADC_THRESHOLD 460
+#define BSE_ACTIVATED_ADC_THRESHOLD 490
 
 #define CROSSCHECK_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.25
 #define CROSSCHECK_RESTORATION_APPS_PERCENT 0.05
 
 #define RPM_TO_CARSPEED_CONVFACTOR (59.0f * 32.0f * 3.14159f * 60.0f) / (12.0f * 39370.1f)
-#define MAX_TORQUE 30
+#define MAX_TORQUE 60
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30
@@ -63,7 +67,7 @@ void calculateTorqueRequest();
 void checkAPPS_Plausibility();
 void checkBSE_Plausibility();
 void checkAPPS_BSE_Crosscheck();
-void sendTorqueRequest(int requestedTorque);
+void sendTorqueRequest(int requestedTorque, uint8_t inverter_on);
 void processInverter_Voltage();
 void processInverter_RPM();
 void resetPlausibilityChecks();

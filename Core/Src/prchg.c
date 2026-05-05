@@ -28,20 +28,24 @@ void configurePrechargeMessage() {
 
 void sendPrechargeRequest() {
 	configurePrechargeMessage();
-    HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &PRCHG_TxHeader, PRCHG_TxData);
 	precharge_response_received = false;
-    precharge_state = PRECHARGE_WAITING;
-    __HAL_TIM_SET_COUNTER(&htim3, 0);
-    HAL_TIM_Base_Start_IT(&htim3); // START PRECHARGE TIMER (6 SECONDS)
+	precharge_state = PRECHARGE_WAITING;
+
+	for (uint8_t request_frames_sent = 0;
+		 request_frames_sent < 3
+		 && HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0;
+		 ++request_frames_sent) {
+		HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &PRCHG_TxHeader, PRCHG_TxData);
+	}
+
+	__HAL_TIM_SET_COUNTER(&htim3, 0);
+	HAL_TIM_Base_Start_IT(&htim3); // START PRECHARGE TIMER (6 SECONDS)
 }
 
 void processPrechargeResponse() {
-	// If BMS signals precharge loss (0), reset VCU state immediately
+	// If the BMS drops precharge after we were energized, return to the full idle baseline.
 	if (RxData1[0] == 0) {
-		precharge_state = PRECHARGE_IDLE;
-		if (vcu_state == VCU_PRECHARGED || vcu_state == VCU_DRIVE) {
-			vcu_state = VCU_IDLE;
-		}
+		resetVCU();
 		return;
 	}
 

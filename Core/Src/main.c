@@ -66,55 +66,114 @@ volatile bool bspd_fault;
 
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
+
+static volatile bool bms_fault_pending;
+static volatile bool imd_fault_pending;
+static volatile bool bspd_fault_pending;
+static volatile uint32_t bms_fault_pending_since;
+static volatile uint32_t imd_fault_pending_since;
+static volatile uint32_t bspd_fault_pending_since;
+static uint32_t inverter_lockout_start;
+static uint32_t inverter_tx_rate_limiter;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
+static void serviceFaultInputs(void);
+static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since);
+static void latchFault(volatile bool *fault_flag, VCU_STATE fault_state);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since) {
+	*pending_flag = true;
+	*pending_since = HAL_GetTick();
+}
+
+static void latchFault(volatile bool *fault_flag, VCU_STATE fault_state) {
+	*fault_flag = true;
+	vcu_state = fault_state;
+	Error_Handler();
+}
+
+static void serviceFaultInputs(void) {
+	uint32_t now = HAL_GetTick();
+
+	if (bms_fault_pending) {
+		if (HAL_GPIO_ReadPin(BMS_FAULT_GPIO_Port, BMS_FAULT_Pin) == GPIO_PIN_SET) {
+			bms_fault_pending = false;
+		} else if ((now - bms_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
+			bms_fault_pending = false;
+			latchFault(&bms_fault, VCU_BMS_FAULT);
+		}
+	}
+
+	if (imd_fault_pending) {
+		if (HAL_GPIO_ReadPin(IMD_FAULT_GPIO_Port, IMD_FAULT_Pin) == GPIO_PIN_SET) {
+			imd_fault_pending = false;
+		} else if ((now - imd_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
+			imd_fault_pending = false;
+			latchFault(&imd_fault, VCU_IMD_FAULT);
+		}
+	}
+
+	if (bspd_fault_pending) {
+		if (HAL_GPIO_ReadPin(BSPD_FAULT_GPIO_Port, BSPD_FAULT_Pin) == GPIO_PIN_SET) {
+			bspd_fault_pending = false;
+		} else if ((now - bspd_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
+			bspd_fault_pending = false;
+			latchFault(&bspd_fault, VCU_BSPD_FAULT);
+		}
+	}
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 1.65V)
-	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 2.24V)
 
+#if APPS2_BYPASS
+	voltage_values[1] = voltage_values[0];
+#else
+	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
+#endif
+
 	if (vcu_state != VCU_DRIVE) return;
+	if ((HAL_GetTick() - inverter_lockout_start) < 150U) return;
 
 	pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
-	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
 	pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
 
-	calculateTorqueRequest();
-	checkAPPS_Plausibility();
-	checkBSE_Plausibility();
-	checkAPPS_BSE_Crosscheck();
+#if APPS2_BYPASS
+	pedal_percents[1] = pedal_percents[0];
+#else
+	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
+#endif
 
-	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
-		sendTorqueRequest( (int)(requestedTorque*10) );
+	calculateTorqueRequest();
+	checkBSE_Plausibility();
+
+	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0
+			&& (HAL_GetTick() - inverter_tx_rate_limiter) > 50U) {
+		sendTorqueRequest((int)(requestedTorque * 10), 1U);
+		inverter_tx_rate_limiter = HAL_GetTick();
 	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-		bms_fault = true;
-		vcu_state = VCU_BMS_FAULT;
-		Error_Handler();
+		queueFaultDebounce(&bms_fault_pending, &bms_fault_pending_since);
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
-		imd_fault = true;
-		vcu_state = VCU_IMD_FAULT;
-		Error_Handler();
+		queueFaultDebounce(&imd_fault_pending, &imd_fault_pending_since);
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
-		bspd_fault = true;
-		vcu_state = VCU_BSPD_FAULT;
-		Error_Handler();
+		queueFaultDebounce(&bspd_fault_pending, &bspd_fault_pending_since);
 	}
 
 	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State
@@ -177,10 +236,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         			return;
     			}
 
-    			vcu_state = VCU_DRIVE;
-    			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
-    		}
-    	}
+				vcu_state = VCU_DRIVE;
+				for (int i = 0; i < 5; ++i) {
+					sendTorqueRequest(0, 0U);
+				}
+				inverter_lockout_start = HAL_GetTick();
+				inverter_tx_rate_limiter = inverter_lockout_start;
+				HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
+			}
+		}
     }
 
     if (htim->Instance == TIM3) {
@@ -195,16 +259,14 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 	fdcan1_debug_cb++;
 	if (RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE)
 	{
-		while (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0) > 0) {
-			if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader1, RxData1) != HAL_OK)
-			{
-				fdcan_rx_error_count++;
-				break;
-			}
-
-			fdcan_rx_count++;
-			FDCAN1_Rx_Handler();
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader1, RxData1) != HAL_OK)
+		{
+			fdcan_rx_error_count++;
+			return;
 		}
+
+		fdcan_rx_count++;
+		FDCAN1_Rx_Handler();
 	}
 }
 
@@ -214,16 +276,14 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	fdcan2_debug_cb++;
 	if (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)
 	{
-		while (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO1) > 0) {
-			if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &RxHeader2, RxData2) != HAL_OK)
-			{
-				fdcan_rx_error_count++;
-				break;
-			}
-
-			fdcan_rx_count++;
-			FDCAN2_Rx_Handler();
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &RxHeader2, RxData2) != HAL_OK)
+		{
+			fdcan_rx_error_count++;
+			return;
 		}
+
+		fdcan_rx_count++;
+		FDCAN2_Rx_Handler();
 	}
 }
 
@@ -241,7 +301,9 @@ int main(void)
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
-  MPU_Config();
+
+
+	MPU_Config();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -333,6 +395,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
+	serviceFaultInputs();
 
     /* USER CODE END WHILE */
 

@@ -74,6 +74,7 @@ void Error_Handler(void);
 #define BSPD_FAULT_EXTI_IRQn EXTI9_5_IRQn
 
 /* USER CODE BEGIN Private defines */
+#define FAULT_SIGNAL_DEBOUNCE_MS 10U
 
 /* USER CODE END Private defines */
 

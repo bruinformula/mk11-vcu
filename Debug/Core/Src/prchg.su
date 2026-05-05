@@ -1,4 +1,4 @@
 ../Core/Src/prchg.c:15:6:configurePrechargeMessage	4	static
-../Core/Src/prchg.c:29:6:sendPrechargeRequest	8	static
-../Core/Src/prchg.c:38:6:processPrechargeResponse	4	static
-../Core/Src/prchg.c:59:6:checkPrechargeStatus	8	static
+../Core/Src/prchg.c:29:6:sendPrechargeRequest	16	static
+../Core/Src/prchg.c:45:6:processPrechargeResponse	8	static
+../Core/Src/prchg.c:63:6:checkPrechargeStatus	8	static

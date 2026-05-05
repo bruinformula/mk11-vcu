@@ -12,6 +12,11 @@ volatile bool rtd_button_pressed;
 volatile bool prchg_button_pressed;
 
 void resetVCU() {
+	HAL_TIM_Base_Stop_IT(&htim1);
+	HAL_TIM_Base_Stop_IT(&htim2);
+	HAL_TIM_Base_Stop_IT(&htim3);
+	HAL_ADC_Stop_DMA(&hadc3);
+
 	precharge_state = PRECHARGE_IDLE;
 	precharge_response_received = false;
 	vcu_state = VCU_IDLE;
@@ -19,6 +24,13 @@ void resetVCU() {
 	prchg_button_pressed = false; // Clamp button state
 	resetPlausibilityChecks();
 	requestedTorque = 0;
+
+	for (uint8_t disable_frames_sent = 0;
+		 disable_frames_sent < 5
+		 && HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0;
+		 ++disable_frames_sent) {
+		sendTorqueRequest(0, 0U);
+	}
 
 	HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3); // Start pedals
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); // Re-enable RTD + PRCHG Buttons
@@ -39,4 +51,11 @@ void faultVCU() {
 	prchg_button_pressed = false; // Clamp button state
 	resetPlausibilityChecks();
 	requestedTorque = 0;
+
+	for (uint8_t disable_frames_sent = 0;
+		 disable_frames_sent < 5
+		 && HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0;
+		 ++disable_frames_sent) {
+		sendTorqueRequest(0, 0U);
+	}
 }

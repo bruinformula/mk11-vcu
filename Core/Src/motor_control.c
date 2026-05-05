@@ -60,7 +60,15 @@ void checkAPPS_Plausibility() {
 #endif
 
 	float pedal_travel_difference_percent = fabsf(pedal_percents[0] - pedal_percents[1]);
-	bool apps_invalid = (pedal_travel_difference_percent > APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE);
+	bool apps1_out_of_range = (pedal_percents[0] < 0.0f || pedal_percents[0] > 1.0f);
+	bool apps2_out_of_range = (pedal_percents[1] < 0.0f || pedal_percents[1] > 1.0f);
+	bool apps_invalid = apps1_out_of_range
+			|| apps2_out_of_range
+			|| (pedal_travel_difference_percent > APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE);
+
+	if (apps_invalid) {
+		requestedTorque = 0;
+	}
 
 	if (plausibility_checks.apps_plausible == true && apps_invalid == true) {
 		millis_since_apps_implausible = HAL_GetTick();
@@ -68,9 +76,7 @@ void checkAPPS_Plausibility() {
 	}
 
 	if (plausibility_checks.apps_plausible == false) {
-		if ((HAL_GetTick() - millis_since_apps_implausible) > APPS_IMPLAUSIBILITY_TIMEOUT_MS) {
-			requestedTorque = 0;
-		}
+		requestedTorque = 0;
 
 		if (apps_invalid == false) {
 			plausibility_checks.apps_plausible = true;

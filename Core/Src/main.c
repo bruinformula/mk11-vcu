@@ -154,7 +154,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 #endif
 
 	calculateTorqueRequest();
+	checkAPPS_Plausibility();
 	checkBSE_Plausibility();
+	checkAPPS_BSE_Crosscheck();
 
 	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0
 			&& (HAL_GetTick() - inverter_tx_rate_limiter) > 50U) {

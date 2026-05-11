@@ -5,5 +5,5 @@
 ../Core/Src/motor_control.c:95:6:checkAPPS_BSE_Crosscheck	16	static
 ../Core/Src/motor_control.c:116:6:sendTorqueRequest	24	static
 ../Core/Src/motor_control.c:133:6:processInverter_Voltage	16	static
-../Core/Src/motor_control.c:144:6:processInverter_RPM	4	static
-../Core/Src/motor_control.c:151:6:resetPlausibilityChecks	4	static
+../Core/Src/motor_control.c:143:6:processInverter_RPM	4	static
+../Core/Src/motor_control.c:150:6:resetPlausibilityChecks	4	static

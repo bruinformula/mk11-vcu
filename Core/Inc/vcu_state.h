@@ -29,6 +29,5 @@ extern volatile bool rtd_button_pressed;
 extern volatile bool prchg_button_pressed;
 
 void resetVCU();
-void faultVCU();
 
 #endif /* INC_VCU_STATE_H_ */

@@ -48,7 +48,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define FAULT_SIGNAL_DEBOUNCE_MS 100
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -61,13 +61,17 @@ volatile uint32_t fdcan_rx_count = 0;          /* Counter for received messages 
 volatile uint32_t fdcan_tx_count = 0;          /* Counter for transmitted messages */
 volatile uint32_t fdcan_rx_error_count = 0;    /* RX error counter */
 
-volatile bool bms_fault;
-volatile bool imd_fault;
-volatile bool bspd_fault;
+static volatile bool bms_fault_pending;
+static volatile bool imd_fault_pending;
+static volatile bool bspd_fault_pending;
+static volatile uint32_t bms_fault_pending_since;
+static volatile uint32_t imd_fault_pending_since;
+static volatile uint32_t bspd_fault_pending_since;
 
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
 
+volatile uint32_t inverter_tx_rate_limiter;
 volatile uint32_t inverter_lockout_start;
 /* USER CODE END PV */
 
@@ -75,11 +79,54 @@ volatile uint32_t inverter_lockout_start;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
-
+static void serviceFaultInputs(void);
+static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since);
+static void latchFault(VCU_STATE fault_state);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since) {
+	*pending_flag = true;
+	*pending_since = HAL_GetTick();
+}
+
+static void latchFault(VCU_STATE fault_state) {
+	vcu_state = fault_state;
+	Error_Handler();
+}
+
+static void serviceFaultInputs(void) {
+	uint32_t now = HAL_GetTick();
+
+	if (bms_fault_pending) {
+		if (HAL_GPIO_ReadPin(BMS_FAULT_GPIO_Port, BMS_FAULT_Pin) == GPIO_PIN_SET) {
+			bms_fault_pending = false;
+		} else if ((now - bms_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
+			bms_fault_pending = false;
+			latchFault(VCU_BMS_FAULT);
+		}
+	}
+
+	if (imd_fault_pending) {
+		if (HAL_GPIO_ReadPin(IMD_FAULT_GPIO_Port, IMD_FAULT_Pin) == GPIO_PIN_SET) {
+			imd_fault_pending = false;
+		} else if ((now - imd_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
+			imd_fault_pending = false;
+			latchFault(VCU_IMD_FAULT);
+		}
+	}
+
+	if (bspd_fault_pending) {
+		if (HAL_GPIO_ReadPin(BSPD_FAULT_GPIO_Port, BSPD_FAULT_Pin) == GPIO_PIN_SET) {
+			bspd_fault_pending = false;
+		} else if ((now - bspd_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
+			bspd_fault_pending = false;
+			latchFault(VCU_BSPD_FAULT);
+		}
+	}
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 1.65V)
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
@@ -97,28 +144,25 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	checkBSE_Plausibility();
 	checkAPPS_BSE_Crosscheck();
 
-	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
-		sendTorqueRequest( (int)(requestedTorque*10), 1, 1);
+	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 &&
+			HAL_GetTick() - inverter_tx_rate_limiter > 50) {
+		sendTorqueRequest( (int)(requestedTorque*10), 0, 1);
+		inverter_tx_rate_limiter = HAL_GetTick();
 	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	// HARD FAULTS!
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-		bms_fault = true;
-		vcu_state = VCU_BMS_FAULT;
-		Error_Handler();
+		queueFaultDebounce(&bms_fault_pending, &bms_fault_pending_since);
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
-		imd_fault = true;
-		vcu_state = VCU_IMD_FAULT;
-		Error_Handler();
+		queueFaultDebounce(&imd_fault_pending, &imd_fault_pending_since);
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
-		bspd_fault = true;
-		vcu_state = VCU_BSPD_FAULT;
-		Error_Handler();
+		queueFaultDebounce(&bspd_fault_pending, &bspd_fault_pending_since);
 	}
 
 	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State
@@ -149,7 +193,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 }
 
-// static bool sound_success = true; // RTD SOUND OVERRIDE
+// RTD SOUND OVERRIDE
+// static bool sound_success = true;
 static bool sound_success;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
@@ -168,20 +213,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
     			// ATTEMPT TO ENTER DRIVE MODE
     			// NOTE: Works without disabling/re-enabling CAN?
-    			HAL_ADC_Stop_DMA(&hadc3);
-    			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+    			// Most likely due to interrupt priority; I2S DMA Priority > CAN RX Priority.
+    			HAL_ADC_Stop_DMA(&hadc3); // Disable pedals
+    			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Disable buttons
     			rtd_button_pressed = false; // Clamp button state
     			prchg_button_pressed = false; // Clamp button state
+
     			// COMMENT OUT FOR RTD SOUND OVERRIDE
     			sound_success = playReadyToDriveSound();
 
     			if (!sound_success) {
-        			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-        			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
+        			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); // Re-enable buttons
+        			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3); // Re-enable pedals
         			return;
     			}
 
     			for (int i = 0; i < 5; ++i) {
+    				// Inverter Lockout
     				sendTorqueRequest(0, 1, 0);
     			}
     			inverter_lockout_start = HAL_GetTick();
@@ -335,13 +383,13 @@ int main(void)
   configureCoolingCmdMsg();
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
 	  sendCoolingCmd();
+	  serviceFaultInputs();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

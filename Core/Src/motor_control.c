@@ -121,7 +121,7 @@ void sendTorqueRequest(uint16_t requestedTorque_i, uint8_t forward, uint8_t inve
 	Inverter_TxData[1] = msg1;
 	Inverter_TxData[2] = 0;
 	Inverter_TxData[3] = 0;
-	Inverter_TxData[4] = forward; // Forward  (1), Backward (0)
+	Inverter_TxData[4] = forward; // Forward  (0), Backward (1)
 	Inverter_TxData[5] = inverter_on; // Inverter Enable (1), Inverter Disable (0)
 	Inverter_TxData[6] = 0; // Default Torque Limits in EEPROM
 	Inverter_TxData[7] = 0; // Default Torque Limits in EEPROM
@@ -132,18 +132,17 @@ void sendTorqueRequest(uint16_t requestedTorque_i, uint8_t forward, uint8_t inve
 
 void processInverter_Voltage() {
 	int16_t inverter_dc_volts_raw = (int16_t) ((RxData1[1] << 8)
-				| RxData1[0]);  // Little-endian
+				| RxData1[0]);
 	inverter_diagnostics.inverter_voltage = inverter_dc_volts_raw * 0.1f;
 	if (inverter_diagnostics.inverter_voltage < INVERTER_VOLTAGE_THRESHOLD &&
 			(vcu_state == VCU_PRECHARGED || vcu_state == VCU_DRIVE)) {
-		 // COMMENT THIS TO OVERRIDE VOLTAGE MONITORING WHEN TESTING
 		 resetVCU();
 	}
 }
 
 void processInverter_RPM() {
-	inverter_diagnostics.inverter_rpm = (float) (RxData1[2]
-				| (RxData1[3] << 8));
+	inverter_diagnostics.inverter_rpm = (float) ((int16_t) (RxData1[2]
+				| (RxData1[3] << 8)));
 	inverter_diagnostics.inverter_carspeed = (float) (inverter_diagnostics.inverter_rpm)
 				* RPM_TO_CARSPEED_CONVFACTOR;
 }

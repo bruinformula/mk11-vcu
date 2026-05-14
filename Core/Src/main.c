@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include "motor_control.h"
 #include "audio.h"
+#include "cooling.h"
 #include "prchg.h"
 #include "vcu_state.h"
 /* USER CODE END Includes */
@@ -389,6 +390,7 @@ int main(void)
   }
 
   configureInverterMessage();
+  configureCoolingCmdMsg();
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
 
@@ -397,6 +399,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
+	sendCoolingCmd();
 	serviceFaultInputs();
 
     /* USER CODE END WHILE */

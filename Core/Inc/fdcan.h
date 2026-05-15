@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file    fdcan.h
-  * @brief   This file contains all the function prototypes for
-  *          the fdcan.c file
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    fdcan.h
+ * @brief   This file contains all the function prototypes for
+ *          the fdcan.c file
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __FDCAN_H__
@@ -45,6 +45,7 @@ extern FDCAN_HandleTypeDef hfdcan2;
 
 // RX ID's
 #define BMS_PRCHG_RX_ID 0x6B4
+#define SHUTDOWN_POWER_LOST_RX_ID 0x6B5
 #define BMS_TEMP_RX_ID 0x6B1
 #define INVERTER_VOLTAGE_RX_ID 0x0A7
 #define INVERTER_RPM_RX_ID 0x0A5
@@ -70,4 +71,3 @@ void FDCAN2_Rx_Handler(void);
 #endif
 
 #endif /* __FDCAN_H__ */
-

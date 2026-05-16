@@ -497,6 +497,12 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  for (uint8_t disable_frames_sent = 0;
+		  disable_frames_sent < 5 && HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0;
+		  ++disable_frames_sent) {
+		sendTorqueRequest(0, 0, 0);
+  }
+
   HAL_I2S_DMAStop(&hi2s2);
   HAL_ADC_Stop_DMA(&hadc3);
   __disable_irq();

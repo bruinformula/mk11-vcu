@@ -73,6 +73,9 @@ volatile uint8_t prchg_debug;
 
 volatile uint32_t inverter_tx_rate_limiter;
 volatile uint32_t inverter_lockout_start;
+
+bool apps1_unplugged;
+bool apps2_unplugged;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -139,6 +142,21 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
 	pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
 
+	// HARD CLAMP: if either APPS sensor is electrically out of range, immediately command zero torque.
+	// FSAE Rule of handling unplugged APPS Pedals!
+	apps1_unplugged = (ADC_VAL[0] < APPS1_ADC_MIN_VAL) || (ADC_VAL[0] > APPS1_ADC_MAX_VAL);
+	apps2_unplugged = (ADC_VAL[1] < APPS2_ADC_MIN_VAL) || (ADC_VAL[1] > APPS2_ADC_MAX_VAL);
+
+	if (apps1_unplugged || apps2_unplugged) {
+		requestedTorque = 0;
+
+		if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 && HAL_GetTick() - inverter_tx_rate_limiter > 50) {
+			sendTorqueRequest(0, 0, 1);
+			inverter_tx_rate_limiter = HAL_GetTick();
+		}
+		return;
+	}
+
 	calculateTorqueRequest();
 	checkAPPS_Plausibility();
 	checkBSE_Plausibility();
@@ -153,19 +171,22 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	// HARD FAULTS!
+	// Due to grounding issues at the moment, these signals sometimes trip for non-trivial periods.
+	// It "passes" the debouncing and hard faults the car unintentionally.
+
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-		queueFaultDebounce(&bms_fault_pending, &bms_fault_pending_since);
+//		queueFaultDebounce(&bms_fault_pending, &bms_fault_pending_since);
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
-		queueFaultDebounce(&imd_fault_pending, &imd_fault_pending_since);
+//		queueFaultDebounce(&imd_fault_pending, &imd_fault_pending_since);
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
-		queueFaultDebounce(&bspd_fault_pending, &bspd_fault_pending_since);
+//		queueFaultDebounce(&bspd_fault_pending, &bspd_fault_pending_since);
 	}
 
-	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State
+	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State!
 	if (GPIO_Pin == PRCHG_BTN_Pin) {
 		prchg_debug++;
 		if (HAL_GPIO_ReadPin(PRCHG_BTN_GPIO_Port, PRCHG_BTN_Pin) == GPIO_PIN_SET) {
@@ -211,7 +232,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     		if (vcu_state != VCU_PRECHARGED) return;
 
     		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
-    			// ATTEMPT TO ENTER DRIVE MODE
+    			// ATTEMPT TO ENTER DRIVE MODE!
+
     			// NOTE: Works without disabling/re-enabling CAN?
     			// Most likely due to interrupt priority; I2S DMA Priority > CAN RX Priority.
     			HAL_ADC_Stop_DMA(&hadc3); // Disable pedals
@@ -381,6 +403,7 @@ int main(void)
 
   configureInverterMessage();
   configureCoolingCmdMsg();
+
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
   /* USER CODE END 2 */
@@ -389,7 +412,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1) {
 	  sendCoolingCmd();
-	  serviceFaultInputs();
+//	  serviceFaultInputs();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

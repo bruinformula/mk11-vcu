@@ -34,7 +34,7 @@ void configureCoolingCmdMsg() {
 
 void calculateTractiveFanPWM(float inverter_temp) {
 	if (vcu_state != VCU_DRIVE) {
-		last_accy_fan_pwm = IDLE_TRACTIVE_FAN_PWM;
+		last_tractive_fan_pwm = IDLE_TRACTIVE_FAN_PWM;
 		return;
 	}
 
@@ -50,7 +50,7 @@ void calculateTractiveFanPWM(float inverter_temp) {
 
 void calculateTractivePumpPWM(float inverter_temp) {
 	if (vcu_state != VCU_DRIVE) {
-		last_accy_fan_pwm = IDLE_TRACTIVE_PUMP_PWM;
+		last_tractive_pump_pwm = IDLE_TRACTIVE_PUMP_PWM;
 		return;
 	}
 
@@ -97,7 +97,7 @@ void processInverter_Temp() {
 
 static uint32_t last_send_time = 0;
 void sendCoolingCmd() {
-	if (last_send_time - HAL_GetTick() < 500) return;
+	if (HAL_GetTick() - last_send_time < 500) return;
 
 	cooling_cmd_df.data.cooling_en = 1;
     cooling_cmd_df.data.tractive_fan_pwm = last_tractive_fan_pwm;

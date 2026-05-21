@@ -13,6 +13,12 @@
 #include "stdint.h"
 #include "vcu_state.h"
 
+// PEDAL_MODE IS EITHER TWO_APPS, ONLY_APPS1, OR ONLY APPS2
+#define TWO_APPS 0
+#define ONLY_APPS1 1
+#define ONLY_APPS2 2
+#define PEDAL_MODE TWO_APPS
+
 #define APPS1_ADC_MAX_VAL 620
 #define APPS1_ADC_MIN_VAL 1880
 
@@ -45,6 +51,8 @@ extern float pedal_percents[3];
 extern float requestedTorque;
 
 typedef struct PlausibilityChecks {
+  bool apps1_unplugged;
+  bool apps2_unplugged;
   bool apps_plausible;
   bool bse_plausible;
   bool crosscheck_plausible;
@@ -59,6 +67,7 @@ typedef struct InverterDiagnostics {
 
 void configureInverterMessage();
 void calculateTorqueRequest();
+void checkAPPS_Unplugged();
 void checkAPPS_Plausibility();
 void checkBSE_Plausibility();
 void checkAPPS_BSE_Crosscheck();

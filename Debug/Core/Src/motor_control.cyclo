@@ -1,9 +1,10 @@
 ../Core/Src/motor_control.c:24:6:configureInverterMessage	1
 ../Core/Src/motor_control.c:36:6:calculateTorqueRequest	4
-../Core/Src/motor_control.c:56:6:checkAPPS_Plausibility	6
-../Core/Src/motor_control.c:79:6:checkBSE_Plausibility	8
-../Core/Src/motor_control.c:99:6:checkAPPS_BSE_Crosscheck	6
-../Core/Src/motor_control.c:120:6:sendTorqueRequest	1
-../Core/Src/motor_control.c:139:6:processInverter_Voltage	1
-../Core/Src/motor_control.c:144:6:processInverter_RPM	1
-../Core/Src/motor_control.c:151:6:resetPlausibilityChecks	1
+../Core/Src/motor_control.c:65:6:checkAPPS_Unplugged	7
+../Core/Src/motor_control.c:92:6:checkAPPS_Plausibility	6
+../Core/Src/motor_control.c:119:6:checkBSE_Plausibility	8
+../Core/Src/motor_control.c:139:6:checkAPPS_BSE_Crosscheck	6
+../Core/Src/motor_control.c:168:6:sendTorqueRequest	1
+../Core/Src/motor_control.c:187:6:processInverter_Voltage	1
+../Core/Src/motor_control.c:192:6:processInverter_RPM	1
+../Core/Src/motor_control.c:199:6:resetPlausibilityChecks	1

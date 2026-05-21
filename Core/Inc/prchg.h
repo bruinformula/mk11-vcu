@@ -14,6 +14,9 @@
 #include "tim.h"
 #include "vcu_state.h"
 
+#define PRECHARGE_MODE_NORMAL 0
+#define PRECHARGE_MODE_BYPASS 1
+#define PRECHARGE_MODE PRECHARGE_MODE_NORMAL
 #define PRECHARGE_TIMEOUT_MS 6000
 
 typedef enum {

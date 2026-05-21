@@ -34,7 +34,16 @@ void configureInverterMessage() {
 }
 
 void calculateTorqueRequest() {
-  float apps_percent_average = (pedal_percents[0] + pedal_percents[1]) / 2;
+	float apps_percent_average;
+
+#if PEDAL_MODE == TWO_APPS
+	apps_percent_average = (pedal_percents[0] + pedal_percents[1]) / 2;
+#elif PEDAL_MODE == ONLY_APPS1
+	apps_percent_average = pedal_percents[0];
+#elif PEDAL_MODE == ONLY_APPS2
+		apps_percent_average = pedal_percents[1];
+#endif
+
   if (apps_percent_average >= APPS_INFLECTION_PERCENT) {
     requestedTorque = ((float)(MAX_TORQUE - MIN_TORQUE)) *
                       (apps_percent_average - APPS_INFLECTION_PERCENT);
@@ -53,7 +62,35 @@ void calculateTorqueRequest() {
   }
 }
 
+void checkAPPS_Unplugged() {
+#if PEDAL_MODE == TWO_APPS
+
+    plausibility_checks.apps1_unplugged = (ADC_VAL[0] < APPS1_ADC_MIN_VAL) ||
+    		(ADC_VAL[0] > APPS1_ADC_MAX_VAL);
+    plausibility_checks.apps2_unplugged = (ADC_VAL[1] < APPS2_ADC_MIN_VAL) ||
+        (ADC_VAL[1] > APPS2_ADC_MAX_VAL);
+
+#elif PEDAL_MODE == ONLY_APPS1
+
+    plausibility_checks.apps1_unplugged = (ADC_VAL[0] < APPS1_ADC_MIN_VAL) ||
+        (ADC_VAL[0] > APPS1_ADC_MAX_VAL);
+    plausibility_checks.apps2_unplugged = false;
+
+#elif PEDAL_MODE == ONLY_APPS2
+
+    plausibility_checks.apps1_unplugged = false;
+    plausibility_checks.apps2_unplugged = (ADC_VAL[1] < APPS2_ADC_MIN_VAL) ||
+        (ADC_VAL[1] > APPS2_ADC_MAX_VAL);
+
+#endif
+
+    if (plausibility_checks.apps1_unplugged || plausibility_checks.apps2_unplugged) {
+        requestedTorque = 0;
+    }
+}
+
 void checkAPPS_Plausibility() {
+#if PEDAL_MODE == TWO_APPS
   float pedal_travel_difference_percent =
       fabsf(pedal_percents[0] - pedal_percents[1]);
   bool apps_invalid = (pedal_travel_difference_percent >
@@ -74,6 +111,9 @@ void checkAPPS_Plausibility() {
       plausibility_checks.apps_plausible = true;
     }
   }
+#else
+  plausibility_checks.apps_plausible = true;
+#endif
 }
 
 void checkBSE_Plausibility() {
@@ -97,7 +137,15 @@ void checkBSE_Plausibility() {
 }
 
 void checkAPPS_BSE_Crosscheck() {
-  float apps_percent_average = (pedal_percents[0] + pedal_percents[1]) / 2;
+	float apps_percent_average;
+
+#if PEDAL_MODE == TWO_APPS
+	apps_percent_average = (pedal_percents[0] + pedal_percents[1]) / 2;
+#elif PEDAL_MODE == ONLY_APPS1
+	apps_percent_average = pedal_percents[0];
+#elif PEDAL_MODE == ONLY_APPS2
+	apps_percent_average = pedal_percents[1];
+#endif
 
   if (plausibility_checks.crosscheck_plausible == true &&
       (apps_percent_average > CROSSCHECK_IMPLAUSIBILITY_PERCENT_DIFFERENCE) &&
@@ -149,6 +197,8 @@ void processInverter_RPM() {
 }
 
 void resetPlausibilityChecks() {
+  plausibility_checks.apps1_unplugged = false;
+  plausibility_checks.apps2_unplugged = false;
   plausibility_checks.apps_plausible = false;
   plausibility_checks.bse_plausible = false;
   plausibility_checks.crosscheck_plausible = false;

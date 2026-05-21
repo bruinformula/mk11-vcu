@@ -47,6 +47,14 @@ void processPrechargeResponse() {
 }
 
 void checkPrechargeStatus() {
+#if PRECHARGE_MODE == PRECHARGE_MODE_BYPASS
+
+	precharge_response_received = true;
+	precharge_state = PRECHARGE_SUCCESS;
+	vcu_state = VCU_PRECHARGED;
+
+#elif PRECHARGE_MODE == PRECHARGE_MODE_NORMAL
+
 	if (precharge_response_received == false) {
 		precharge_state = PRECHARGE_TIMEOUT;
 		vcu_state = VCU_CAN_FAULT;
@@ -57,7 +65,5 @@ void checkPrechargeStatus() {
 		}
 	}
 
-	//  BYPASS PRECHARGE!
-	//  precharge_state = PRECHARGE_SUCCESS;
-	//  vcu_state = VCU_PRECHARGED;
+#endif
 }

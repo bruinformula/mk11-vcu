@@ -48,7 +48,19 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+
+// SHUTDOWN_SIGNAL_MODE == DEFAULT_MODE will only poll hard fault signals in resetVCU().
+// SHUTDOWN_SIGNAL_MODE == INTERRUPT_MODE will detect hard fault signals via interrupt.
+#define SHUTDOWN_DEFAULT_MODE 0
+#define SHUTDOWN_INTERRUPT_MODE 1
+#define SHUTDOWN_SIGNAL_MODE SHUTDOWN_DEFAULT_MODE
 #define FAULT_SIGNAL_DEBOUNCE_MS 100
+
+// RTD_SOUND_MODE == RTD_SOUND_NORMAL will attempt to play sound over I2S.
+// RTD_SOUND_MODE == RTD_SOUND_OVERRIDE will assume successful speaker playback.
+#define RTD_SOUND_NORMAL 0
+#define RTD_SOUND_OVERRIDE 1
+#define RTD_SOUND_MODE RTD_SOUND_NORMAL
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -73,9 +85,6 @@ volatile uint8_t prchg_debug;
 
 volatile uint32_t inverter_tx_rate_limiter;
 volatile uint32_t inverter_lockout_start;
-
-bool apps1_unplugged;
-bool apps2_unplugged;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -142,22 +151,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
 	pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
 
-	// HARD CLAMP: if either APPS sensor is electrically out of range, immediately command zero torque.
-	// FSAE Rule of handling unplugged APPS Pedals!
-	apps1_unplugged = (ADC_VAL[0] < APPS1_ADC_MIN_VAL) || (ADC_VAL[0] > APPS1_ADC_MAX_VAL);
-	apps2_unplugged = (ADC_VAL[1] < APPS2_ADC_MIN_VAL) || (ADC_VAL[1] > APPS2_ADC_MAX_VAL);
-
-	if (apps1_unplugged || apps2_unplugged) {
-		requestedTorque = 0;
-
-		if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 && HAL_GetTick() - inverter_tx_rate_limiter > 50) {
-			sendTorqueRequest(0, 0, 1);
-			inverter_tx_rate_limiter = HAL_GetTick();
-		}
-		return;
-	}
-
 	calculateTorqueRequest();
+	checkAPPS_Unplugged();
 	checkAPPS_Plausibility();
 	checkBSE_Plausibility();
 	checkAPPS_BSE_Crosscheck();
@@ -172,21 +167,22 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	// HARD FAULTS!
 	// Due to grounding issues at the moment, these signals sometimes trip for non-trivial periods.
-	// It "passes" the debouncing and hard faults the car unintentionally.
+	// It sometimes "passes" the debouncing period and hard faults the car unintentionally.
 
+#if SHUTDOWN_SIGNAL_MODE == SHUTDOWN_INTERRUPT_MODE
 	if (GPIO_Pin == BMS_FAULT_Pin) {
-//		queueFaultDebounce(&bms_fault_pending, &bms_fault_pending_since);
+		queueFaultDebounce(&bms_fault_pending, &bms_fault_pending_since);
 	}
 
 	if (GPIO_Pin == IMD_FAULT_Pin) {
-//		queueFaultDebounce(&imd_fault_pending, &imd_fault_pending_since);
+		queueFaultDebounce(&imd_fault_pending, &imd_fault_pending_since);
 	}
 
 	if (GPIO_Pin == BSPD_FAULT_Pin) {
-//		queueFaultDebounce(&bspd_fault_pending, &bspd_fault_pending_since);
+		queueFaultDebounce(&bspd_fault_pending, &bspd_fault_pending_since);
 	}
+#endif
 
-	// NOTE: Button presses only work in VCU_IDLE or VCU_PRECHARGED State!
 	if (GPIO_Pin == PRCHG_BTN_Pin) {
 		prchg_debug++;
 		if (HAL_GPIO_ReadPin(PRCHG_BTN_GPIO_Port, PRCHG_BTN_Pin) == GPIO_PIN_SET) {
@@ -214,8 +210,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 }
 
-// RTD SOUND OVERRIDE
-// static bool sound_success = true;
 static bool sound_success;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
@@ -232,17 +226,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     		if (vcu_state != VCU_PRECHARGED) return;
 
     		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
+
     			// ATTEMPT TO ENTER DRIVE MODE!
 
     			// NOTE: Works without disabling/re-enabling CAN?
-    			// Most likely due to interrupt priority; I2S DMA Priority > CAN RX Priority.
-    			HAL_ADC_Stop_DMA(&hadc3); // Disable pedals
-    			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Disable buttons
+    			// Most likely due to interrupt priority.
+    			// I2S DMA Priority > CAN RX Priority.
+
+    			HAL_ADC_Stop_DMA(&hadc3); // Disable pedals!
+    			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Disable buttons!
     			rtd_button_pressed = false; // Clamp button state
     			prchg_button_pressed = false; // Clamp button state
 
-    			// COMMENT OUT FOR RTD SOUND OVERRIDE
+#if RTD_SOUND_MODE == RTD_SOUND_NORMAL
     			sound_success = playReadyToDriveSound();
+#elif RTD_SOUND_MODE == RTD_SOUND_OVERRIDE
+    			sound_success = true;
+#endif
 
     			if (!sound_success) {
         			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); // Re-enable buttons
@@ -412,8 +412,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1) {
 	  sendCoolingCmd();
-//	  serviceFaultInputs();
-
+#if SHUTDOWN_SIGNAL_MODE == SHUTDOWN_INTERRUPT_MODE
+	  serviceFaultInputs();
+#endif
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

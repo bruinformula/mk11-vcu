@@ -63,24 +63,28 @@ void calculateTorqueRequest() {
 }
 
 void checkAPPS_Unplugged() {
+// TODO: WEIRD HALL EFFECT ADC DECREASES AS YOU PRESS
+// SO, APPS1_MIN_ADC_VAL IS ACTUALLY LARGER THAN APPS1_MAX_ADC_VAL
+// Should rename this function to explain it clamps values to 0 if APPS not pressed OR APPS unplugged
+
 #if PEDAL_MODE == TWO_APPS
 
-    plausibility_checks.apps1_unplugged = (ADC_VAL[0] < APPS1_ADC_MIN_VAL) ||
-    		(ADC_VAL[0] > APPS1_ADC_MAX_VAL);
-    plausibility_checks.apps2_unplugged = (ADC_VAL[1] < APPS2_ADC_MIN_VAL) ||
-        (ADC_VAL[1] > APPS2_ADC_MAX_VAL);
+    plausibility_checks.apps1_unplugged = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
+    		(ADC_VAL[0] < APPS1_ADC_MAX_VAL);
+    plausibility_checks.apps2_unplugged = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
+        (ADC_VAL[1] < APPS2_ADC_MAX_VAL);
 
 #elif PEDAL_MODE == ONLY_APPS1
 
-    plausibility_checks.apps1_unplugged = (ADC_VAL[0] < APPS1_ADC_MIN_VAL) ||
-        (ADC_VAL[0] > APPS1_ADC_MAX_VAL);
+    plausibility_checks.apps1_unplugged = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
+        (ADC_VAL[0] < APPS1_ADC_MAX_VAL);
     plausibility_checks.apps2_unplugged = false;
 
 #elif PEDAL_MODE == ONLY_APPS2
 
     plausibility_checks.apps1_unplugged = false;
-    plausibility_checks.apps2_unplugged = (ADC_VAL[1] < APPS2_ADC_MIN_VAL) ||
-        (ADC_VAL[1] > APPS2_ADC_MAX_VAL);
+    plausibility_checks.apps2_unplugged = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
+        (ADC_VAL[1] < APPS2_ADC_MAX_VAL);
 
 #endif
 

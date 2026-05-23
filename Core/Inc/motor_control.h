@@ -40,7 +40,7 @@
 
 #define RPM_TO_CARSPEED_CONVFACTOR                                             \
   (59.0f * 32.0f * 3.14159f * 60.0f) / (12.0f * 39370.1f)
-#define MAX_TORQUE 10
+#define MAX_TORQUE 50
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30

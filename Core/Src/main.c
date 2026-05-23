@@ -151,6 +151,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
 	pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
 
+	// Clamp pedal percents to [0.0f, 1.0f] to handle mechanical overshoot
+	for (int i = 0; i < 3; i++) {
+		if (pedal_percents[i] < 0.0f) pedal_percents[i] = 0.0f;
+		if (pedal_percents[i] > 1.0f) pedal_percents[i] = 1.0f;
+	}
+
 	calculateTorqueRequest();
 	checkAPPS_Unplugged();
 	checkAPPS_Plausibility();

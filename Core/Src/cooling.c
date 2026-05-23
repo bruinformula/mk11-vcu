@@ -20,6 +20,10 @@ static float phase_b_temp;
 static float phase_c_temp;
 static float inv_avg_temp;
 
+static uint8_t last_tractive_fan_pwm = IDLE_TRACTIVE_FAN_PWM;
+static uint8_t last_tractive_pump_pwm = IDLE_TRACTIVE_PUMP_PWM;
+static uint8_t last_accy_fan_pwm = IDLE_ACCY_FAN_PWM;
+
 void configureCoolingCmdMsg() {
 	CoolingCmd_TxHeader.Identifier = VCU_COOLING_CMD_TX_ID;
 	CoolingCmd_TxHeader.IdType = FDCAN_STANDARD_ID;

@@ -33,9 +33,9 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  14 .debug_line   00021992  00000000  00000000  001334e5  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_str    0016a2d5  00000000  00000000  00154e77  2**0
+ 15 .debug_str    0016a2d6  00000000  00000000  00154e77  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .comment      00000043  00000000  00000000  002bf14c  2**0
+ 16 .comment      00000043  00000000  00000000  002bf14d  2**0
                   CONTENTS, READONLY
  17 .debug_frame  00006bac  00000000  00000000  002bf190  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -2354,11 +2354,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
  800154c:	24002474 	.word	0x24002474
  8001550:	240025cc 	.word	0x240025cc
  8001554:	24002438 	.word	0x24002438
- 8001558:	44a8c000 	.word	0x44a8c000
- 800155c:	c46d8000 	.word	0xc46d8000
+ 8001558:	44b54000 	.word	0x44b54000
+ 800155c:	c48d4000 	.word	0xc48d4000
  8001560:	24002480 	.word	0x24002480
  8001564:	44f3c000 	.word	0x44f3c000
- 8001568:	c4b54000 	.word	0xc4b54000
+ 8001568:	c4b04000 	.word	0xc4b04000
  800156c:	43af0000 	.word	0x43af0000
  8001570:	446d8000 	.word	0x446d8000
  8001574:	240021b0 	.word	0x240021b0
@@ -2509,7 +2509,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
  8001664:	781b      	ldrb	r3, [r3, #0]
  8001666:	b2db      	uxtb	r3, r3
  8001668:	2b00      	cmp	r3, #0
- 800166a:	d160      	bne.n	800172e <HAL_TIM_PeriodElapsedCallback+0xee>
+ 800166a:	d161      	bne.n	8001730 <HAL_TIM_PeriodElapsedCallback+0xf0>
     		sendPrechargeRequest();
  800166c:	f000 fcfc 	bl	8002068 <sendPrechargeRequest>
     	}
@@ -2519,13 +2519,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
  8001670:	687b      	ldr	r3, [r7, #4]
  8001672:	681b      	ldr	r3, [r3, #0]
  8001674:	f1b3 4f80 	cmp.w	r3, #1073741824	@ 0x40000000
- 8001678:	d14e      	bne.n	8001718 <HAL_TIM_PeriodElapsedCallback+0xd8>
+ 8001678:	d14f      	bne.n	800171a <HAL_TIM_PeriodElapsedCallback+0xda>
     	if (rtd_button_pressed == true) {
  800167a:	4b34      	ldr	r3, [pc, #208]	@ (800174c <HAL_TIM_PeriodElapsedCallback+0x10c>)
  800167c:	781b      	ldrb	r3, [r3, #0]
  800167e:	b2db      	uxtb	r3, r3
  8001680:	2b00      	cmp	r3, #0
- 8001682:	d049      	beq.n	8001718 <HAL_TIM_PeriodElapsedCallback+0xd8>
+ 8001682:	d04a      	beq.n	800171a <HAL_TIM_PeriodElapsedCallback+0xda>
     		HAL_TIM_Base_Stop_IT(&htim2);
  8001684:	4832      	ldr	r0, [pc, #200]	@ (8001750 <HAL_TIM_PeriodElapsedCallback+0x110>)
  8001686:	f00b fb77 	bl	800cd78 <HAL_TIM_Base_Stop_IT>
@@ -2534,123 +2534,123 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
  800168c:	781b      	ldrb	r3, [r3, #0]
  800168e:	b2db      	uxtb	r3, r3
  8001690:	2b01      	cmp	r3, #1
- 8001692:	d14e      	bne.n	8001732 <HAL_TIM_PeriodElapsedCallback+0xf2>
+ 8001692:	d14f      	bne.n	8001734 <HAL_TIM_PeriodElapsedCallback+0xf4>
 
     		if (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD) {
  8001694:	4b2f      	ldr	r3, [pc, #188]	@ (8001754 <HAL_TIM_PeriodElapsedCallback+0x114>)
  8001696:	889b      	ldrh	r3, [r3, #4]
- 8001698:	f5b3 7f61 	cmp.w	r3, #900	@ 0x384
- 800169c:	d93c      	bls.n	8001718 <HAL_TIM_PeriodElapsedCallback+0xd8>
+ 8001698:	f240 52dc 	movw	r2, #1500	@ 0x5dc
+ 800169c:	4293      	cmp	r3, r2
+ 800169e:	d93c      	bls.n	800171a <HAL_TIM_PeriodElapsedCallback+0xda>
 
     			// NOTE: Works without disabling/re-enabling CAN?
     			// Most likely due to interrupt priority.
     			// I2S DMA Priority > CAN RX Priority.
 
     			HAL_ADC_Stop_DMA(&hadc3); // Disable pedals!
- 800169e:	482e      	ldr	r0, [pc, #184]	@ (8001758 <HAL_TIM_PeriodElapsedCallback+0x118>)
- 80016a0:	f001 ff8e 	bl	80035c0 <HAL_ADC_Stop_DMA>
+ 80016a0:	482d      	ldr	r0, [pc, #180]	@ (8001758 <HAL_TIM_PeriodElapsedCallback+0x118>)
+ 80016a2:	f001 ff8d 	bl	80035c0 <HAL_ADC_Stop_DMA>
     			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Disable buttons!
- 80016a4:	2028      	movs	r0, #40	@ 0x28
- 80016a6:	f003 fc30 	bl	8004f0a <HAL_NVIC_DisableIRQ>
+ 80016a6:	2028      	movs	r0, #40	@ 0x28
+ 80016a8:	f003 fc2f 	bl	8004f0a <HAL_NVIC_DisableIRQ>
     			rtd_button_pressed = false; // Clamp button state
- 80016aa:	4b28      	ldr	r3, [pc, #160]	@ (800174c <HAL_TIM_PeriodElapsedCallback+0x10c>)
- 80016ac:	2200      	movs	r2, #0
- 80016ae:	701a      	strb	r2, [r3, #0]
+ 80016ac:	4b27      	ldr	r3, [pc, #156]	@ (800174c <HAL_TIM_PeriodElapsedCallback+0x10c>)
+ 80016ae:	2200      	movs	r2, #0
+ 80016b0:	701a      	strb	r2, [r3, #0]
     			prchg_button_pressed = false; // Clamp button state
- 80016b0:	4b23      	ldr	r3, [pc, #140]	@ (8001740 <HAL_TIM_PeriodElapsedCallback+0x100>)
- 80016b2:	2200      	movs	r2, #0
- 80016b4:	701a      	strb	r2, [r3, #0]
+ 80016b2:	4b23      	ldr	r3, [pc, #140]	@ (8001740 <HAL_TIM_PeriodElapsedCallback+0x100>)
+ 80016b4:	2200      	movs	r2, #0
+ 80016b6:	701a      	strb	r2, [r3, #0]
 
 #if RTD_SOUND_MODE == RTD_SOUND_NORMAL
     			sound_success = playReadyToDriveSound();
- 80016b6:	f7ff f809 	bl	80006cc <playReadyToDriveSound>
- 80016ba:	4603      	mov	r3, r0
- 80016bc:	461a      	mov	r2, r3
- 80016be:	4b27      	ldr	r3, [pc, #156]	@ (800175c <HAL_TIM_PeriodElapsedCallback+0x11c>)
- 80016c0:	701a      	strb	r2, [r3, #0]
+ 80016b8:	f7ff f808 	bl	80006cc <playReadyToDriveSound>
+ 80016bc:	4603      	mov	r3, r0
+ 80016be:	461a      	mov	r2, r3
+ 80016c0:	4b26      	ldr	r3, [pc, #152]	@ (800175c <HAL_TIM_PeriodElapsedCallback+0x11c>)
+ 80016c2:	701a      	strb	r2, [r3, #0]
 #elif RTD_SOUND_MODE == RTD_SOUND_OVERRIDE
     			sound_success = true;
 #endif
 
     			if (!sound_success) {
- 80016c2:	4b26      	ldr	r3, [pc, #152]	@ (800175c <HAL_TIM_PeriodElapsedCallback+0x11c>)
- 80016c4:	781b      	ldrb	r3, [r3, #0]
- 80016c6:	f083 0301 	eor.w	r3, r3, #1
- 80016ca:	b2db      	uxtb	r3, r3
- 80016cc:	2b00      	cmp	r3, #0
- 80016ce:	d008      	beq.n	80016e2 <HAL_TIM_PeriodElapsedCallback+0xa2>
+ 80016c4:	4b25      	ldr	r3, [pc, #148]	@ (800175c <HAL_TIM_PeriodElapsedCallback+0x11c>)
+ 80016c6:	781b      	ldrb	r3, [r3, #0]
+ 80016c8:	f083 0301 	eor.w	r3, r3, #1
+ 80016cc:	b2db      	uxtb	r3, r3
+ 80016ce:	2b00      	cmp	r3, #0
+ 80016d0:	d008      	beq.n	80016e4 <HAL_TIM_PeriodElapsedCallback+0xa4>
         			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); // Re-enable buttons
- 80016d0:	2028      	movs	r0, #40	@ 0x28
- 80016d2:	f003 fc0c 	bl	8004eee <HAL_NVIC_EnableIRQ>
+ 80016d2:	2028      	movs	r0, #40	@ 0x28
+ 80016d4:	f003 fc0b 	bl	8004eee <HAL_NVIC_EnableIRQ>
         			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3); // Re-enable pedals
- 80016d6:	2203      	movs	r2, #3
- 80016d8:	491e      	ldr	r1, [pc, #120]	@ (8001754 <HAL_TIM_PeriodElapsedCallback+0x114>)
- 80016da:	481f      	ldr	r0, [pc, #124]	@ (8001758 <HAL_TIM_PeriodElapsedCallback+0x118>)
- 80016dc:	f001 fe94 	bl	8003408 <HAL_ADC_Start_DMA>
+ 80016d8:	2203      	movs	r2, #3
+ 80016da:	491e      	ldr	r1, [pc, #120]	@ (8001754 <HAL_TIM_PeriodElapsedCallback+0x114>)
+ 80016dc:	481e      	ldr	r0, [pc, #120]	@ (8001758 <HAL_TIM_PeriodElapsedCallback+0x118>)
+ 80016de:	f001 fe93 	bl	8003408 <HAL_ADC_Start_DMA>
         			return;
- 80016e0:	e028      	b.n	8001734 <HAL_TIM_PeriodElapsedCallback+0xf4>
+ 80016e2:	e028      	b.n	8001736 <HAL_TIM_PeriodElapsedCallback+0xf6>
     			}
 
     			for (int i = 0; i < 5; ++i) {
- 80016e2:	2300      	movs	r3, #0
- 80016e4:	60fb      	str	r3, [r7, #12]
- 80016e6:	e007      	b.n	80016f8 <HAL_TIM_PeriodElapsedCallback+0xb8>
+ 80016e4:	2300      	movs	r3, #0
+ 80016e6:	60fb      	str	r3, [r7, #12]
+ 80016e8:	e007      	b.n	80016fa <HAL_TIM_PeriodElapsedCallback+0xba>
     				// Inverter Lockout
     				sendTorqueRequest(0, 1, 0);
- 80016e8:	2200      	movs	r2, #0
- 80016ea:	2101      	movs	r1, #1
- 80016ec:	2000      	movs	r0, #0
- 80016ee:	f000 fbdf 	bl	8001eb0 <sendTorqueRequest>
+ 80016ea:	2200      	movs	r2, #0
+ 80016ec:	2101      	movs	r1, #1
+ 80016ee:	2000      	movs	r0, #0
+ 80016f0:	f000 fbde 	bl	8001eb0 <sendTorqueRequest>
     			for (int i = 0; i < 5; ++i) {
- 80016f2:	68fb      	ldr	r3, [r7, #12]
- 80016f4:	3301      	adds	r3, #1
- 80016f6:	60fb      	str	r3, [r7, #12]
- 80016f8:	68fb      	ldr	r3, [r7, #12]
- 80016fa:	2b04      	cmp	r3, #4
- 80016fc:	ddf4      	ble.n	80016e8 <HAL_TIM_PeriodElapsedCallback+0xa8>
+ 80016f4:	68fb      	ldr	r3, [r7, #12]
+ 80016f6:	3301      	adds	r3, #1
+ 80016f8:	60fb      	str	r3, [r7, #12]
+ 80016fa:	68fb      	ldr	r3, [r7, #12]
+ 80016fc:	2b04      	cmp	r3, #4
+ 80016fe:	ddf4      	ble.n	80016ea <HAL_TIM_PeriodElapsedCallback+0xaa>
     			}
     			inverter_lockout_start = HAL_GetTick();
- 80016fe:	f001 f8e3 	bl	80028c8 <HAL_GetTick>
- 8001702:	4603      	mov	r3, r0
- 8001704:	4a16      	ldr	r2, [pc, #88]	@ (8001760 <HAL_TIM_PeriodElapsedCallback+0x120>)
- 8001706:	6013      	str	r3, [r2, #0]
+ 8001700:	f001 f8e2 	bl	80028c8 <HAL_GetTick>
+ 8001704:	4603      	mov	r3, r0
+ 8001706:	4a16      	ldr	r2, [pc, #88]	@ (8001760 <HAL_TIM_PeriodElapsedCallback+0x120>)
+ 8001708:	6013      	str	r3, [r2, #0]
 
     			vcu_state = VCU_DRIVE;
- 8001708:	4b0f      	ldr	r3, [pc, #60]	@ (8001748 <HAL_TIM_PeriodElapsedCallback+0x108>)
- 800170a:	2202      	movs	r2, #2
- 800170c:	701a      	strb	r2, [r3, #0]
+ 800170a:	4b0f      	ldr	r3, [pc, #60]	@ (8001748 <HAL_TIM_PeriodElapsedCallback+0x108>)
+ 800170c:	2202      	movs	r2, #2
+ 800170e:	701a      	strb	r2, [r3, #0]
     			HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
- 800170e:	2203      	movs	r2, #3
- 8001710:	4910      	ldr	r1, [pc, #64]	@ (8001754 <HAL_TIM_PeriodElapsedCallback+0x114>)
- 8001712:	4811      	ldr	r0, [pc, #68]	@ (8001758 <HAL_TIM_PeriodElapsedCallback+0x118>)
- 8001714:	f001 fe78 	bl	8003408 <HAL_ADC_Start_DMA>
+ 8001710:	2203      	movs	r2, #3
+ 8001712:	4910      	ldr	r1, [pc, #64]	@ (8001754 <HAL_TIM_PeriodElapsedCallback+0x114>)
+ 8001714:	4810      	ldr	r0, [pc, #64]	@ (8001758 <HAL_TIM_PeriodElapsedCallback+0x118>)
+ 8001716:	f001 fe77 	bl	8003408 <HAL_ADC_Start_DMA>
     		}
     	}
     }
 
     if (htim->Instance == TIM3) {
- 8001718:	687b      	ldr	r3, [r7, #4]
- 800171a:	681b      	ldr	r3, [r3, #0]
- 800171c:	4a11      	ldr	r2, [pc, #68]	@ (8001764 <HAL_TIM_PeriodElapsedCallback+0x124>)
- 800171e:	4293      	cmp	r3, r2
- 8001720:	d108      	bne.n	8001734 <HAL_TIM_PeriodElapsedCallback+0xf4>
+ 800171a:	687b      	ldr	r3, [r7, #4]
+ 800171c:	681b      	ldr	r3, [r3, #0]
+ 800171e:	4a11      	ldr	r2, [pc, #68]	@ (8001764 <HAL_TIM_PeriodElapsedCallback+0x124>)
+ 8001720:	4293      	cmp	r3, r2
+ 8001722:	d108      	bne.n	8001736 <HAL_TIM_PeriodElapsedCallback+0xf6>
     	HAL_TIM_Base_Stop_IT(&htim3);
- 8001722:	4811      	ldr	r0, [pc, #68]	@ (8001768 <HAL_TIM_PeriodElapsedCallback+0x128>)
- 8001724:	f00b fb28 	bl	800cd78 <HAL_TIM_Base_Stop_IT>
+ 8001724:	4810      	ldr	r0, [pc, #64]	@ (8001768 <HAL_TIM_PeriodElapsedCallback+0x128>)
+ 8001726:	f00b fb27 	bl	800cd78 <HAL_TIM_Base_Stop_IT>
     	checkPrechargeStatus();
- 8001728:	f000 fce4 	bl	80020f4 <checkPrechargeStatus>
- 800172c:	e002      	b.n	8001734 <HAL_TIM_PeriodElapsedCallback+0xf4>
+ 800172a:	f000 fce3 	bl	80020f4 <checkPrechargeStatus>
+ 800172e:	e002      	b.n	8001736 <HAL_TIM_PeriodElapsedCallback+0xf6>
     		if (vcu_state != VCU_IDLE) return;
- 800172e:	bf00      	nop
- 8001730:	e000      	b.n	8001734 <HAL_TIM_PeriodElapsedCallback+0xf4>
+ 8001730:	bf00      	nop
+ 8001732:	e000      	b.n	8001736 <HAL_TIM_PeriodElapsedCallback+0xf6>
     		if (vcu_state != VCU_PRECHARGED) return;
- 8001732:	bf00      	nop
+ 8001734:	bf00      	nop
     }
 }
- 8001734:	3710      	adds	r7, #16
- 8001736:	46bd      	mov	sp, r7
- 8001738:	bd80      	pop	{r7, pc}
- 800173a:	bf00      	nop
+ 8001736:	3710      	adds	r7, #16
+ 8001738:	46bd      	mov	sp, r7
+ 800173a:	bd80      	pop	{r7, pc}
  800173c:	40010000 	.word	0x40010000
  8001740:	240025ce 	.word	0x240025ce
  8001744:	240024e8 	.word	0x240024e8
@@ -3450,11 +3450,11 @@ void calculateTorqueRequest() {
  8001c08:	9999999a 	.word	0x9999999a
  8001c0c:	3fa99999 	.word	0x3fa99999
  8001c10:	00000000 	.word	0x00000000
- 8001c14:	40490000 	.word	0x40490000
+ 8001c14:	40518000 	.word	0x40518000
  8001c18:	24002480 	.word	0x24002480
  8001c1c:	2400248c 	.word	0x2400248c
- 8001c20:	42480000 	.word	0x42480000
- 8001c24:	42480000 	.word	0x42480000
+ 8001c20:	428c0000 	.word	0x428c0000
+ 8001c24:	428c0000 	.word	0x428c0000
  8001c28:	24002490 	.word	0x24002490
 
 08001c2c <checkAPPS_Unplugged>:
@@ -3468,70 +3468,70 @@ void checkAPPS_Unplugged() {
 #if PEDAL_MODE == TWO_APPS
 
     plausibility_checks.apps1_unplugged = (ADC_VAL[0] > (APPS1_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
- 8001c30:	4b19      	ldr	r3, [pc, #100]	@ (8001c98 <checkAPPS_Unplugged+0x6c>)
+ 8001c30:	4b1a      	ldr	r3, [pc, #104]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
  8001c32:	881b      	ldrh	r3, [r3, #0]
- 8001c34:	f5b3 6fc8 	cmp.w	r3, #1600	@ 0x640
- 8001c38:	d803      	bhi.n	8001c42 <checkAPPS_Unplugged+0x16>
+ 8001c34:	f240 62a4 	movw	r2, #1700	@ 0x6a4
+ 8001c38:	4293      	cmp	r3, r2
+ 8001c3a:	d803      	bhi.n	8001c44 <checkAPPS_Unplugged+0x18>
     		(ADC_VAL[0] < (APPS1_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
- 8001c3a:	4b17      	ldr	r3, [pc, #92]	@ (8001c98 <checkAPPS_Unplugged+0x6c>)
- 8001c3c:	881b      	ldrh	r3, [r3, #0]
+ 8001c3c:	4b17      	ldr	r3, [pc, #92]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
+ 8001c3e:	881b      	ldrh	r3, [r3, #0]
     plausibility_checks.apps1_unplugged = (ADC_VAL[0] > (APPS1_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
- 8001c3e:	2b95      	cmp	r3, #149	@ 0x95
- 8001c40:	d801      	bhi.n	8001c46 <checkAPPS_Unplugged+0x1a>
- 8001c42:	2301      	movs	r3, #1
- 8001c44:	e000      	b.n	8001c48 <checkAPPS_Unplugged+0x1c>
- 8001c46:	2300      	movs	r3, #0
- 8001c48:	f003 0301 	and.w	r3, r3, #1
- 8001c4c:	b2da      	uxtb	r2, r3
- 8001c4e:	4b13      	ldr	r3, [pc, #76]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
- 8001c50:	701a      	strb	r2, [r3, #0]
+ 8001c40:	2b45      	cmp	r3, #69	@ 0x45
+ 8001c42:	d801      	bhi.n	8001c48 <checkAPPS_Unplugged+0x1c>
+ 8001c44:	2301      	movs	r3, #1
+ 8001c46:	e000      	b.n	8001c4a <checkAPPS_Unplugged+0x1e>
+ 8001c48:	2300      	movs	r3, #0
+ 8001c4a:	f003 0301 	and.w	r3, r3, #1
+ 8001c4e:	b2da      	uxtb	r2, r3
+ 8001c50:	4b13      	ldr	r3, [pc, #76]	@ (8001ca0 <checkAPPS_Unplugged+0x74>)
+ 8001c52:	701a      	strb	r2, [r3, #0]
     plausibility_checks.apps2_unplugged = (ADC_VAL[1] > (APPS2_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
- 8001c52:	4b11      	ldr	r3, [pc, #68]	@ (8001c98 <checkAPPS_Unplugged+0x6c>)
- 8001c54:	885b      	ldrh	r3, [r3, #2]
- 8001c56:	f640 0298 	movw	r2, #2200	@ 0x898
- 8001c5a:	4293      	cmp	r3, r2
- 8001c5c:	d803      	bhi.n	8001c66 <checkAPPS_Unplugged+0x3a>
+ 8001c54:	4b11      	ldr	r3, [pc, #68]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
+ 8001c56:	885b      	ldrh	r3, [r3, #2]
+ 8001c58:	f640 0298 	movw	r2, #2200	@ 0x898
+ 8001c5c:	4293      	cmp	r3, r2
+ 8001c5e:	d804      	bhi.n	8001c6a <checkAPPS_Unplugged+0x3e>
         (ADC_VAL[1] < (APPS2_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
- 8001c5e:	4b0e      	ldr	r3, [pc, #56]	@ (8001c98 <checkAPPS_Unplugged+0x6c>)
- 8001c60:	885b      	ldrh	r3, [r3, #2]
+ 8001c60:	4b0e      	ldr	r3, [pc, #56]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
+ 8001c62:	885b      	ldrh	r3, [r3, #2]
     plausibility_checks.apps2_unplugged = (ADC_VAL[1] > (APPS2_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
- 8001c62:	2bf9      	cmp	r3, #249	@ 0xf9
- 8001c64:	d801      	bhi.n	8001c6a <checkAPPS_Unplugged+0x3e>
- 8001c66:	2301      	movs	r3, #1
- 8001c68:	e000      	b.n	8001c6c <checkAPPS_Unplugged+0x40>
- 8001c6a:	2300      	movs	r3, #0
- 8001c6c:	f003 0301 	and.w	r3, r3, #1
- 8001c70:	b2da      	uxtb	r2, r3
- 8001c72:	4b0a      	ldr	r3, [pc, #40]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
- 8001c74:	705a      	strb	r2, [r3, #1]
+ 8001c64:	f5b3 7f91 	cmp.w	r3, #290	@ 0x122
+ 8001c68:	d201      	bcs.n	8001c6e <checkAPPS_Unplugged+0x42>
+ 8001c6a:	2301      	movs	r3, #1
+ 8001c6c:	e000      	b.n	8001c70 <checkAPPS_Unplugged+0x44>
+ 8001c6e:	2300      	movs	r3, #0
+ 8001c70:	f003 0301 	and.w	r3, r3, #1
+ 8001c74:	b2da      	uxtb	r2, r3
+ 8001c76:	4b0a      	ldr	r3, [pc, #40]	@ (8001ca0 <checkAPPS_Unplugged+0x74>)
+ 8001c78:	705a      	strb	r2, [r3, #1]
     plausibility_checks.apps2_unplugged = (ADC_VAL[1] > (APPS2_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
         (ADC_VAL[1] < (APPS2_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
 
 #endif
 
     if (plausibility_checks.apps1_unplugged || plausibility_checks.apps2_unplugged) {
- 8001c76:	4b09      	ldr	r3, [pc, #36]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
- 8001c78:	781b      	ldrb	r3, [r3, #0]
- 8001c7a:	2b00      	cmp	r3, #0
- 8001c7c:	d103      	bne.n	8001c86 <checkAPPS_Unplugged+0x5a>
- 8001c7e:	4b07      	ldr	r3, [pc, #28]	@ (8001c9c <checkAPPS_Unplugged+0x70>)
- 8001c80:	785b      	ldrb	r3, [r3, #1]
- 8001c82:	2b00      	cmp	r3, #0
- 8001c84:	d003      	beq.n	8001c8e <checkAPPS_Unplugged+0x62>
+ 8001c7a:	4b09      	ldr	r3, [pc, #36]	@ (8001ca0 <checkAPPS_Unplugged+0x74>)
+ 8001c7c:	781b      	ldrb	r3, [r3, #0]
+ 8001c7e:	2b00      	cmp	r3, #0
+ 8001c80:	d103      	bne.n	8001c8a <checkAPPS_Unplugged+0x5e>
+ 8001c82:	4b07      	ldr	r3, [pc, #28]	@ (8001ca0 <checkAPPS_Unplugged+0x74>)
+ 8001c84:	785b      	ldrb	r3, [r3, #1]
+ 8001c86:	2b00      	cmp	r3, #0
+ 8001c88:	d003      	beq.n	8001c92 <checkAPPS_Unplugged+0x66>
         requestedTorque = 0;
- 8001c86:	4b06      	ldr	r3, [pc, #24]	@ (8001ca0 <checkAPPS_Unplugged+0x74>)
- 8001c88:	f04f 0200 	mov.w	r2, #0
- 8001c8c:	601a      	str	r2, [r3, #0]
+ 8001c8a:	4b06      	ldr	r3, [pc, #24]	@ (8001ca4 <checkAPPS_Unplugged+0x78>)
+ 8001c8c:	f04f 0200 	mov.w	r2, #0
+ 8001c90:	601a      	str	r2, [r3, #0]
     }
 }
- 8001c8e:	bf00      	nop
- 8001c90:	46bd      	mov	sp, r7
- 8001c92:	f85d 7b04 	ldr.w	r7, [sp], #4
- 8001c96:	4770      	bx	lr
- 8001c98:	2400246c 	.word	0x2400246c
- 8001c9c:	2400249c 	.word	0x2400249c
- 8001ca0:	2400248c 	.word	0x2400248c
- 8001ca4:	00000000 	.word	0x00000000
+ 8001c92:	bf00      	nop
+ 8001c94:	46bd      	mov	sp, r7
+ 8001c96:	f85d 7b04 	ldr.w	r7, [sp], #4
+ 8001c9a:	4770      	bx	lr
+ 8001c9c:	2400246c 	.word	0x2400246c
+ 8001ca0:	2400249c 	.word	0x2400249c
+ 8001ca4:	2400248c 	.word	0x2400248c
 
 08001ca8 <checkAPPS_Plausibility>:
 
@@ -3746,64 +3746,65 @@ void checkAPPS_BSE_Crosscheck() {
  8001e22:	4b20      	ldr	r3, [pc, #128]	@ (8001ea4 <checkAPPS_BSE_Crosscheck+0xa4>)
  8001e24:	791b      	ldrb	r3, [r3, #4]
  8001e26:	2b00      	cmp	r3, #0
- 8001e28:	d014      	beq.n	8001e54 <checkAPPS_BSE_Crosscheck+0x54>
+ 8001e28:	d015      	beq.n	8001e56 <checkAPPS_BSE_Crosscheck+0x56>
  8001e2a:	edd7 7a01 	vldr	s15, [r7, #4]
  8001e2e:	eeb5 7a00 	vmov.f32	s14, #80	@ 0x3e800000  0.250
  8001e32:	eef4 7ac7 	vcmpe.f32	s15, s14
  8001e36:	eef1 fa10 	vmrs	APSR_nzcv, fpscr
- 8001e3a:	dd0b      	ble.n	8001e54 <checkAPPS_BSE_Crosscheck+0x54>
+ 8001e3a:	dd0c      	ble.n	8001e56 <checkAPPS_BSE_Crosscheck+0x56>
       (apps_percent_average > CROSSCHECK_IMPLAUSIBILITY_PERCENT_DIFFERENCE) &&
       (ADC_VAL[2] > BSE_ACTIVATED_ADC_THRESHOLD)) {
  8001e3c:	4b1a      	ldr	r3, [pc, #104]	@ (8001ea8 <checkAPPS_BSE_Crosscheck+0xa8>)
  8001e3e:	889b      	ldrh	r3, [r3, #4]
       (apps_percent_average > CROSSCHECK_IMPLAUSIBILITY_PERCENT_DIFFERENCE) &&
- 8001e40:	f5b3 7f61 	cmp.w	r3, #900	@ 0x384
- 8001e44:	d906      	bls.n	8001e54 <checkAPPS_BSE_Crosscheck+0x54>
+ 8001e40:	f240 52dc 	movw	r2, #1500	@ 0x5dc
+ 8001e44:	4293      	cmp	r3, r2
+ 8001e46:	d906      	bls.n	8001e56 <checkAPPS_BSE_Crosscheck+0x56>
     plausibility_checks.crosscheck_plausible = false;
- 8001e46:	4b17      	ldr	r3, [pc, #92]	@ (8001ea4 <checkAPPS_BSE_Crosscheck+0xa4>)
- 8001e48:	2200      	movs	r2, #0
- 8001e4a:	711a      	strb	r2, [r3, #4]
+ 8001e48:	4b16      	ldr	r3, [pc, #88]	@ (8001ea4 <checkAPPS_BSE_Crosscheck+0xa4>)
+ 8001e4a:	2200      	movs	r2, #0
+ 8001e4c:	711a      	strb	r2, [r3, #4]
     requestedTorque = 0;
- 8001e4c:	4b17      	ldr	r3, [pc, #92]	@ (8001eac <checkAPPS_BSE_Crosscheck+0xac>)
- 8001e4e:	f04f 0200 	mov.w	r2, #0
- 8001e52:	601a      	str	r2, [r3, #0]
+ 8001e4e:	4b17      	ldr	r3, [pc, #92]	@ (8001eac <checkAPPS_BSE_Crosscheck+0xac>)
+ 8001e50:	f04f 0200 	mov.w	r2, #0
+ 8001e54:	601a      	str	r2, [r3, #0]
   }
 
   if (plausibility_checks.crosscheck_plausible == false) {
- 8001e54:	4b13      	ldr	r3, [pc, #76]	@ (8001ea4 <checkAPPS_BSE_Crosscheck+0xa4>)
- 8001e56:	791b      	ldrb	r3, [r3, #4]
- 8001e58:	f083 0301 	eor.w	r3, r3, #1
- 8001e5c:	b2db      	uxtb	r3, r3
- 8001e5e:	2b00      	cmp	r3, #0
- 8001e60:	d012      	beq.n	8001e88 <checkAPPS_BSE_Crosscheck+0x88>
+ 8001e56:	4b13      	ldr	r3, [pc, #76]	@ (8001ea4 <checkAPPS_BSE_Crosscheck+0xa4>)
+ 8001e58:	791b      	ldrb	r3, [r3, #4]
+ 8001e5a:	f083 0301 	eor.w	r3, r3, #1
+ 8001e5e:	b2db      	uxtb	r3, r3
+ 8001e60:	2b00      	cmp	r3, #0
+ 8001e62:	d012      	beq.n	8001e8a <checkAPPS_BSE_Crosscheck+0x8a>
     if (apps_percent_average <= CROSSCHECK_RESTORATION_APPS_PERCENT) {
- 8001e62:	edd7 7a01 	vldr	s15, [r7, #4]
- 8001e66:	eeb7 7ae7 	vcvt.f64.f32	d7, s15
- 8001e6a:	ed9f 6b0b 	vldr	d6, [pc, #44]	@ 8001e98 <checkAPPS_BSE_Crosscheck+0x98>
- 8001e6e:	eeb4 7bc6 	vcmpe.f64	d7, d6
- 8001e72:	eef1 fa10 	vmrs	APSR_nzcv, fpscr
- 8001e76:	d803      	bhi.n	8001e80 <checkAPPS_BSE_Crosscheck+0x80>
+ 8001e64:	edd7 7a01 	vldr	s15, [r7, #4]
+ 8001e68:	eeb7 7ae7 	vcvt.f64.f32	d7, s15
+ 8001e6c:	ed9f 6b0a 	vldr	d6, [pc, #40]	@ 8001e98 <checkAPPS_BSE_Crosscheck+0x98>
+ 8001e70:	eeb4 7bc6 	vcmpe.f64	d7, d6
+ 8001e74:	eef1 fa10 	vmrs	APSR_nzcv, fpscr
+ 8001e78:	d803      	bhi.n	8001e82 <checkAPPS_BSE_Crosscheck+0x82>
       plausibility_checks.crosscheck_plausible = true; // CLEAR FAULT
- 8001e78:	4b0a      	ldr	r3, [pc, #40]	@ (8001ea4 <checkAPPS_BSE_Crosscheck+0xa4>)
- 8001e7a:	2201      	movs	r2, #1
- 8001e7c:	711a      	strb	r2, [r3, #4]
+ 8001e7a:	4b0a      	ldr	r3, [pc, #40]	@ (8001ea4 <checkAPPS_BSE_Crosscheck+0xa4>)
+ 8001e7c:	2201      	movs	r2, #1
+ 8001e7e:	711a      	strb	r2, [r3, #4]
     } else {
       requestedTorque = 0; // KEEP MOTOR SHUT DOWN
     }
   }
 }
- 8001e7e:	e003      	b.n	8001e88 <checkAPPS_BSE_Crosscheck+0x88>
+ 8001e80:	e003      	b.n	8001e8a <checkAPPS_BSE_Crosscheck+0x8a>
       requestedTorque = 0; // KEEP MOTOR SHUT DOWN
- 8001e80:	4b0a      	ldr	r3, [pc, #40]	@ (8001eac <checkAPPS_BSE_Crosscheck+0xac>)
- 8001e82:	f04f 0200 	mov.w	r2, #0
- 8001e86:	601a      	str	r2, [r3, #0]
+ 8001e82:	4b0a      	ldr	r3, [pc, #40]	@ (8001eac <checkAPPS_BSE_Crosscheck+0xac>)
+ 8001e84:	f04f 0200 	mov.w	r2, #0
+ 8001e88:	601a      	str	r2, [r3, #0]
 }
- 8001e88:	bf00      	nop
- 8001e8a:	370c      	adds	r7, #12
- 8001e8c:	46bd      	mov	sp, r7
- 8001e8e:	f85d 7b04 	ldr.w	r7, [sp], #4
- 8001e92:	4770      	bx	lr
- 8001e94:	f3af 8000 	nop.w
+ 8001e8a:	bf00      	nop
+ 8001e8c:	370c      	adds	r7, #12
+ 8001e8e:	46bd      	mov	sp, r7
+ 8001e90:	f85d 7b04 	ldr.w	r7, [sp], #4
+ 8001e94:	4770      	bx	lr
+ 8001e96:	bf00      	nop
  8001e98:	9999999a 	.word	0x9999999a
  8001e9c:	3fa99999 	.word	0x3fa99999
  8001ea0:	24002480 	.word	0x24002480

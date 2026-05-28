@@ -7174,9 +7174,8 @@ LOAD /Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.id
                 0x08001b38       0xf4 ./Core/Src/motor_control.o
                 0x08001b38                calculateTorqueRequest
  .text.checkAPPS_Unplugged
-                0x08001c2c       0x78 ./Core/Src/motor_control.o
+                0x08001c2c       0x7c ./Core/Src/motor_control.o
                 0x08001c2c                checkAPPS_Unplugged
- *fill*         0x08001ca4        0x4 
  .text.checkAPPS_Plausibility
                 0x08001ca8       0xb0 ./Core/Src/motor_control.o
                 0x08001ca8                checkAPPS_Plausibility
@@ -8533,37 +8532,37 @@ LOAD /Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.id
  .debug_line    0x0001ba76     0x406f ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.o
  .debug_line    0x0001fae5     0x1ead ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.o
 
-.debug_str      0x00000000   0x16a2d5
- .debug_str     0x00000000   0x16a2d5 ./Core/Src/adc.o
+.debug_str      0x00000000   0x16a2d6
+ .debug_str     0x00000000   0x16a2d6 ./Core/Src/adc.o
                              0x1611db (size before relaxing)
- .debug_str     0x0016a2d5   0x160d79 ./Core/Src/audio.o
- .debug_str     0x0016a2d5   0x160959 ./Core/Src/cooling.o
- .debug_str     0x0016a2d5   0x160623 ./Core/Src/dma.o
- .debug_str     0x0016a2d5   0x161614 ./Core/Src/fdcan.o
- .debug_str     0x0016a2d5   0x1606b5 ./Core/Src/gpio.o
- .debug_str     0x0016a2d5   0x1607f6 ./Core/Src/i2s.o
- .debug_str     0x0016a2d5   0x162cbf ./Core/Src/main.o
- .debug_str     0x0016a2d5   0x160972 ./Core/Src/motor_control.o
- .debug_str     0x0016a2d5   0x160dab ./Core/Src/prchg.o
- .debug_str     0x0016a2d5   0x15fe16 ./Core/Src/stm32h7xx_hal_msp.o
- .debug_str     0x0016a2d5   0x160be8 ./Core/Src/stm32h7xx_it.o
- .debug_str     0x0016a2d5   0x15ff4f ./Core/Src/system_stm32h7xx.o
- .debug_str     0x0016a2d5   0x160e29 ./Core/Src/tim.o
- .debug_str     0x0016a2d5   0x161856 ./Core/Src/vcu_state.o
- .debug_str     0x0016a2d5       0x85 ./Core/Startup/startup_stm32h723zgtx.o
- .debug_str     0x0016a2d5   0x160f9a ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.o
- .debug_str     0x0016a2d5   0x160fbf ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.o
- .debug_str     0x0016a2d5   0x160edf ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.o
- .debug_str     0x0016a2d5   0x1608b4 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.o
- .debug_str     0x0016a2d5   0x1606c5 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.o
- .debug_str     0x0016a2d5   0x161c90 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_fdcan.o
- .debug_str     0x0016a2d5   0x15ff5b ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.o
- .debug_str     0x0016a2d5   0x160455 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2s.o
- .debug_str     0x0016a2d5   0x160363 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.o
- .debug_str     0x0016a2d5   0x1602de ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.o
- .debug_str     0x0016a2d5   0x1607f6 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.o
- .debug_str     0x0016a2d5   0x1610dc ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.o
- .debug_str     0x0016a2d5   0x160a89 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.o
+ .debug_str     0x0016a2d6   0x160d7a ./Core/Src/audio.o
+ .debug_str     0x0016a2d6   0x16095a ./Core/Src/cooling.o
+ .debug_str     0x0016a2d6   0x160623 ./Core/Src/dma.o
+ .debug_str     0x0016a2d6   0x161615 ./Core/Src/fdcan.o
+ .debug_str     0x0016a2d6   0x1606b5 ./Core/Src/gpio.o
+ .debug_str     0x0016a2d6   0x1607f6 ./Core/Src/i2s.o
+ .debug_str     0x0016a2d6   0x162cc0 ./Core/Src/main.o
+ .debug_str     0x0016a2d6   0x160973 ./Core/Src/motor_control.o
+ .debug_str     0x0016a2d6   0x160dac ./Core/Src/prchg.o
+ .debug_str     0x0016a2d6   0x15fe16 ./Core/Src/stm32h7xx_hal_msp.o
+ .debug_str     0x0016a2d6   0x160be8 ./Core/Src/stm32h7xx_it.o
+ .debug_str     0x0016a2d6   0x15ff4f ./Core/Src/system_stm32h7xx.o
+ .debug_str     0x0016a2d6   0x160e29 ./Core/Src/tim.o
+ .debug_str     0x0016a2d6   0x161857 ./Core/Src/vcu_state.o
+ .debug_str     0x0016a2d6       0x85 ./Core/Startup/startup_stm32h723zgtx.o
+ .debug_str     0x0016a2d6   0x160f9a ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.o
+ .debug_str     0x0016a2d6   0x160fbf ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.o
+ .debug_str     0x0016a2d6   0x160edf ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.o
+ .debug_str     0x0016a2d6   0x1608b4 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.o
+ .debug_str     0x0016a2d6   0x1606c5 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.o
+ .debug_str     0x0016a2d6   0x161c90 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_fdcan.o
+ .debug_str     0x0016a2d6   0x15ff5b ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.o
+ .debug_str     0x0016a2d6   0x160455 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2s.o
+ .debug_str     0x0016a2d6   0x160363 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.o
+ .debug_str     0x0016a2d6   0x1602de ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.o
+ .debug_str     0x0016a2d6   0x1607f6 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.o
+ .debug_str     0x0016a2d6   0x1610dc ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.o
+ .debug_str     0x0016a2d6   0x160a89 ./Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.o
 
 .comment        0x00000000       0x43
  .comment       0x00000000       0x43 ./Core/Src/adc.o

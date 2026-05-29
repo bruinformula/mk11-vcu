@@ -49,13 +49,6 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
-// SHUTDOWN_SIGNAL_MODE == DEFAULT_MODE will only poll hard fault signals in resetVCU().
-// SHUTDOWN_SIGNAL_MODE == INTERRUPT_MODE will detect hard fault signals via interrupt.
-#define SHUTDOWN_DEFAULT_MODE 0
-#define SHUTDOWN_INTERRUPT_MODE 1
-#define SHUTDOWN_SIGNAL_MODE SHUTDOWN_DEFAULT_MODE
-#define FAULT_SIGNAL_DEBOUNCE_MS 100
-
 // RTD_SOUND_MODE == RTD_SOUND_NORMAL will attempt to play sound over I2S.
 // RTD_SOUND_MODE == RTD_SOUND_OVERRIDE will assume successful speaker playback.
 #define RTD_SOUND_NORMAL 0
@@ -71,14 +64,8 @@ int fdcan2_debug_cb = 0;
 
 volatile uint32_t fdcan_rx_count = 0;          /* Counter for received messages */
 volatile uint32_t fdcan_tx_count = 0;          /* Counter for transmitted messages */
+/* Counter for transmitted messages */
 volatile uint32_t fdcan_rx_error_count = 0;    /* RX error counter */
-
-static volatile bool bms_fault_pending;
-static volatile bool imd_fault_pending;
-static volatile bool bspd_fault_pending;
-static volatile uint32_t bms_fault_pending_since;
-static volatile uint32_t imd_fault_pending_since;
-static volatile uint32_t bspd_fault_pending_since;
 
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
@@ -91,53 +78,12 @@ volatile uint32_t inverter_lockout_start;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
-static void serviceFaultInputs(void);
-static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since);
-static void latchFault(VCU_STATE fault_state);
+/* USER CODE BEGIN PFP */
+/* USER CODE END PFP */
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since) {
-	*pending_flag = true;
-	*pending_since = HAL_GetTick();
-}
-
-static void latchFault(VCU_STATE fault_state) {
-	vcu_state = fault_state;
-	Error_Handler();
-}
-
-static void serviceFaultInputs(void) {
-	uint32_t now = HAL_GetTick();
-
-	if (bms_fault_pending) {
-		if (HAL_GPIO_ReadPin(BMS_FAULT_GPIO_Port, BMS_FAULT_Pin) == GPIO_PIN_SET) {
-			bms_fault_pending = false;
-		} else if ((now - bms_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
-			bms_fault_pending = false;
-			latchFault(VCU_BMS_FAULT);
-		}
-	}
-
-	if (imd_fault_pending) {
-		if (HAL_GPIO_ReadPin(IMD_FAULT_GPIO_Port, IMD_FAULT_Pin) == GPIO_PIN_SET) {
-			imd_fault_pending = false;
-		} else if ((now - imd_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
-			imd_fault_pending = false;
-			latchFault(VCU_IMD_FAULT);
-		}
-	}
-
-	if (bspd_fault_pending) {
-		if (HAL_GPIO_ReadPin(BSPD_FAULT_GPIO_Port, BSPD_FAULT_Pin) == GPIO_PIN_SET) {
-			bspd_fault_pending = false;
-		} else if ((now - bspd_fault_pending_since) >= FAULT_SIGNAL_DEBOUNCE_MS) {
-			bspd_fault_pending = false;
-			latchFault(VCU_BSPD_FAULT);
-		}
-	}
-}
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 1.65V)
@@ -172,22 +118,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	// HARD FAULTS!
-	// Due to grounding issues at the moment, these signals sometimes trip for non-trivial periods.
-	// It sometimes "passes" the debouncing period and hard faults the car unintentionally.
-
-#if SHUTDOWN_SIGNAL_MODE == SHUTDOWN_INTERRUPT_MODE
-	if (GPIO_Pin == BMS_FAULT_Pin) {
-		queueFaultDebounce(&bms_fault_pending, &bms_fault_pending_since);
-	}
-
-	if (GPIO_Pin == IMD_FAULT_Pin) {
-		queueFaultDebounce(&imd_fault_pending, &imd_fault_pending_since);
-	}
-
-	if (GPIO_Pin == BSPD_FAULT_Pin) {
-		queueFaultDebounce(&bspd_fault_pending, &bspd_fault_pending_since);
-	}
-#endif
+	// Hardware PCB handles external faults. VCU ignores them.
 
 	if (GPIO_Pin == PRCHG_BTN_Pin) {
 		prchg_debug++;
@@ -418,9 +349,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1) {
 	  sendCoolingCmd();
-#if SHUTDOWN_SIGNAL_MODE == SHUTDOWN_INTERRUPT_MODE
-	  serviceFaultInputs();
-#endif
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

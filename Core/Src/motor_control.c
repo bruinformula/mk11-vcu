@@ -52,9 +52,12 @@ void calculateTorqueRequest() {
       requestedTorque = MAX_TORQUE;
     }
   } else {
-    if (inverter_diagnostics.inverter_carspeed < 5.0f) {
+    // Cancel regen if speed is low, or if the brake pedal is pressed (>5%).
+    // Commanding regen while the mechanical brakes lock the wheels causes massive phase currents and trips the inverter.
+    if (inverter_diagnostics.inverter_carspeed < 5.0f || pedal_percents[2] > 0.05f) {
       requestedTorque = 0;
     } else {
+      // Calculate normal regen torque based on pedal position
       requestedTorque = (REGEN_MAX_TORQUE - REGEN_BASELINE_TORQUE) *
                         ((APPS_INFLECTION_PERCENT - apps_percent_average) /
                          APPS_INFLECTION_PERCENT);

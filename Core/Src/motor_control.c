@@ -62,33 +62,35 @@ void calculateTorqueRequest() {
   }
 }
 
-void checkAPPS_Unplugged() {
-// TODO: WEIRD HALL EFFECT ADC DECREASES AS YOU PRESS
-// SO, APPS1_MIN_ADC_VAL IS ACTUALLY LARGER THAN APPS1_MAX_ADC_VAL
-// Should rename this function to explain it clamps values to 0 if APPS not pressed OR APPS unplugged
+void validateAPPS() {
+// Note that as APPS1 and APPS2 are pressed, raw ADC value DECREASES.
+// Handles 3 cases and cuts torque to 0 in case.
+// 1. APPS1 or APPS2 are plugged in and not pressed; ADC Value will be larger than ADC_MIN_VAL.
+// 2. APPS1 or APPS2 are plugged in and pressed beyond intended range of motion; ADC Value will be smaller than ADC_MAX_VAL.
+// 3. APPS1 or APPS2 are unplugged and raw ADC value is ~ 70; this is smaller than ADC_MAX_VAL.
 
 #if PEDAL_MODE == TWO_APPS
 
-    plausibility_checks.apps1_unplugged = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
+    plausibility_checks.apps1_invalid = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
     		(ADC_VAL[0] < APPS1_ADC_MAX_VAL);
-    plausibility_checks.apps2_unplugged = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
+    plausibility_checks.apps2_invalid = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
         (ADC_VAL[1] < APPS2_ADC_MAX_VAL);
 
 #elif PEDAL_MODE == ONLY_APPS1
 
-    plausibility_checks.apps1_unplugged = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
+    plausibility_checks.apps1_invalid = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
         (ADC_VAL[0] < APPS1_ADC_MAX_VAL);
-    plausibility_checks.apps2_unplugged = false;
+    plausibility_checks.apps2_invalid = false;
 
 #elif PEDAL_MODE == ONLY_APPS2
 
-    plausibility_checks.apps1_unplugged = false;
-    plausibility_checks.apps2_unplugged = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
+    plausibility_checks.apps1_invalid = false;
+    plausibility_checks.apps2_invalid = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
         (ADC_VAL[1] < APPS2_ADC_MAX_VAL);
 
 #endif
 
-    if (plausibility_checks.apps1_unplugged || plausibility_checks.apps2_unplugged) {
+    if (plausibility_checks.apps1_invalid || plausibility_checks.apps2_invalid) {
         requestedTorque = 0;
     }
 }
@@ -201,8 +203,8 @@ void processInverter_RPM() {
 }
 
 void resetPlausibilityChecks() {
-  plausibility_checks.apps1_unplugged = false;
-  plausibility_checks.apps2_unplugged = false;
+  plausibility_checks.apps1_invalid = false;
+  plausibility_checks.apps2_invalid = false;
   plausibility_checks.apps_plausible = false;
   plausibility_checks.bse_plausible = false;
   plausibility_checks.crosscheck_plausible = false;

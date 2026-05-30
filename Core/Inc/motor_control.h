@@ -40,7 +40,7 @@
 
 #define RPM_TO_CARSPEED_CONVFACTOR                                             \
   (59.0f * 32.0f * 3.14159f * 60.0f) / (12.0f * 39370.1f)
-#define MAX_TORQUE 10
+#define MAX_TORQUE 70
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30
@@ -51,8 +51,8 @@ extern float pedal_percents[3];
 extern float requestedTorque;
 
 typedef struct PlausibilityChecks {
-  bool apps1_unplugged;
-  bool apps2_unplugged;
+  bool apps1_invalid;
+  bool apps2_invalid;
   bool apps_plausible;
   bool bse_plausible;
   bool crosscheck_plausible;
@@ -67,7 +67,7 @@ typedef struct InverterDiagnostics {
 
 void configureInverterMessage();
 void calculateTorqueRequest();
-void checkAPPS_Unplugged();
+void validateAPPS();
 void checkAPPS_Plausibility();
 void checkBSE_Plausibility();
 void checkAPPS_BSE_Crosscheck();

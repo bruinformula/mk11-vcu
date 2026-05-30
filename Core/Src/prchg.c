@@ -9,7 +9,7 @@
 
 static FDCAN_TxHeaderTypeDef PRCHG_TxHeader;
 static uint8_t PRCHG_TxData[8];
-bool precharge_response_received = false;
+volatile bool precharge_response_received = false;
 volatile PrechargeState precharge_state = PRECHARGE_IDLE;
 
 void configurePrechargeMessage() {

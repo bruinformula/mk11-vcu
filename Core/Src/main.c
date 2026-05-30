@@ -152,13 +152,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	pedal_percents[2] = ((float) ADC_VAL[2] - BSE_ADC_MIN_VAL) / (BSE_ADC_MAX_VAL - BSE_ADC_MIN_VAL);
 
 	calculateTorqueRequest();
-	checkAPPS_Unplugged();
+	validateAPPS();
 	checkAPPS_Plausibility();
 	checkBSE_Plausibility();
 	checkAPPS_BSE_Crosscheck();
 
 	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 &&
-			HAL_GetTick() - inverter_tx_rate_limiter > 50) {
+			HAL_GetTick() - inverter_tx_rate_limiter > 5) {
 		sendTorqueRequest( (int)(requestedTorque*10), 0, 1);
 		inverter_tx_rate_limiter = HAL_GetTick();
 	}

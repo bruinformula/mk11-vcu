@@ -48,6 +48,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define INVERTER_RATE_LIMIT_MS 10
 
 // SHUTDOWN_SIGNAL_MODE == DEFAULT_MODE will only poll hard fault signals in resetVCU().
 // SHUTDOWN_SIGNAL_MODE == INTERRUPT_MODE will detect hard fault signals via interrupt.
@@ -91,13 +92,22 @@ volatile uint32_t inverter_lockout_start;
 void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
+
+#if SHUTDOWN_SIGNAL_MODE == SHUTDOWN_INTERRUPT_MODE
+
 static void serviceFaultInputs(void);
 static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since);
 static void latchFault(VCU_STATE fault_state);
+
+#endif
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+#if SHUTDOWN_SIGNAL_MODE == SHUTDOWN_INTERRUPT_MODE
+
 static void queueFaultDebounce(volatile bool *pending_flag, volatile uint32_t *pending_since) {
 	*pending_flag = true;
 	*pending_since = HAL_GetTick();
@@ -139,6 +149,8 @@ static void serviceFaultInputs(void) {
 	}
 }
 
+#endif
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 1.65V)
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
@@ -158,7 +170,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	checkAPPS_BSE_Crosscheck();
 
 	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 &&
-			HAL_GetTick() - inverter_tx_rate_limiter > 5) {
+			HAL_GetTick() - inverter_tx_rate_limiter > INVERTER_RATE_LIMIT_MS) {
 		sendTorqueRequest( (int)(requestedTorque*10), 0, 1);
 		inverter_tx_rate_limiter = HAL_GetTick();
 	}

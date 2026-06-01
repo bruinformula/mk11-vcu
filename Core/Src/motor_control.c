@@ -7,33 +7,25 @@
 
 #include "motor_control.h"
 
-static FDCAN_TxHeaderTypeDef Inverter_TxHeader;
-static uint8_t Inverter_TxData[8];
-
 uint16_t ADC_VAL[3];
 float voltage_values[3];
 float pedal_percents[3];
-float requestedTorque;
-
-static InverterDiagnostics inverter_diagnostics;
+float requestedTorque = 0.0f;
 
 PlausibilityChecks plausibility_checks;
 static uint32_t millis_since_apps_implausible;
 static uint32_t millis_since_bse_implausible;
 
-void configureInverterMessage() {
-  Inverter_TxHeader.Identifier = INVERTER_TORQUE_REQUEST_TX_ID;
-  Inverter_TxHeader.IdType = FDCAN_STANDARD_ID;
-  Inverter_TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-  Inverter_TxHeader.DataLength = FDCAN_DLC_BYTES_8;
-  Inverter_TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-  Inverter_TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-  Inverter_TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-  Inverter_TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
-  Inverter_TxHeader.MessageMarker = 0;
-}
+static FDCAN_TxHeaderTypeDef Inverter_TxHeader;
+static uint8_t Inverter_TxData[8];
+static InverterDiagnostics inverter_diagnostics;
+
+// ------------------------
+// PEDAL PROCCESSING LOGIC
+// ------------------------
 
 void calculateTorqueRequest() {
+	float targetTorque = 0.0f;
 	float apps_percent_average;
 
 #if PEDAL_MODE == TWO_APPS
@@ -45,20 +37,85 @@ void calculateTorqueRequest() {
 #endif
 
   if (apps_percent_average >= APPS_INFLECTION_PERCENT) {
-    requestedTorque = ((float)(MAX_TORQUE - MIN_TORQUE)) *
-                      (apps_percent_average - APPS_INFLECTION_PERCENT);
+	  // POSITIVE TORQUE REGION
 
-    if (requestedTorque >= MAX_TORQUE) {
-      requestedTorque = MAX_TORQUE;
-    }
+	 targetTorque = ((float)(MAX_TORQUE - MIN_TORQUE)) *
+			 (apps_percent_average - APPS_INFLECTION_PERCENT);
+
+	 // GENERAL TORQUE CLAMPING
+	 if (targetTorque >= MAX_TORQUE) {
+		 targetTorque = MAX_TORQUE;
+	 }
+
+	 if (targetTorque <= MIN_TORQUE) {
+		 targetTorque = MIN_TORQUE;
+	 }
+
+	 // HIGH RPM TORQUE DERATER
+	 // 73 kW Power Limit; FSAE Rules establishes 80 kW Power Limit, so 73 kW is a safe cutoff.
+	 // Power = Torque * Angular Velocity
+	 // Angular Velocity = RPM * 2 * PI / 60
+
+	 if (inverter_diagnostics.inverter_rpm > 100.0f) {
+		 float max_power_limited_torque =
+				 INVERTER_POWER_LIMIT_W /
+				 (inverter_diagnostics.inverter_rpm *
+				 TWO_PI_OVER_60);
+
+		 if (targetTorque > max_power_limited_torque) {
+			 targetTorque = max_power_limited_torque;
+		 }
+	 }
   } else {
-    if (inverter_diagnostics.inverter_carspeed < 5.0f) {
-      requestedTorque = 0;
-    } else {
-      requestedTorque = (REGEN_MAX_TORQUE - REGEN_BASELINE_TORQUE) *
-                        ((APPS_INFLECTION_PERCENT - apps_percent_average) /
-                         APPS_INFLECTION_PERCENT);
-    }
+	  // REGEN REGION
+
+	  if (inverter_diagnostics.inverter_carspeed < 5.0f
+			  || pedal_percents[2] > 0.05f) {
+		  // Cancel region if car speed is low, or brake pedal is pressed (>5%).
+		  // Commanding regen while brake pedal is pressed causes large phase currents and trips inverter.
+		  targetTorque = 0.0f;
+	  } else {
+		  targetTorque = (REGEN_MAX_TORQUE - REGEN_BASELINE_TORQUE) *
+		  			               ((APPS_INFLECTION_PERCENT - apps_percent_average) /
+		  			                APPS_INFLECTION_PERCENT);
+	  }
+   }
+
+   // LOW PASS FILTER AND SLEW RATE LIMITER
+  static float filtered_target_torque = 0.0f;
+
+  static uint32_t last_torque_calc_time = 0;
+  uint32_t current_time = HAL_GetTick();
+
+  // Initialize filter on startup!
+  if (last_torque_calc_time == 0) {
+	  last_torque_calc_time = current_time;
+	  filtered_target_torque = targetTorque;
+	  requestedTorque = filtered_target_torque;
+	  return;
+  }
+
+  uint32_t dt_ms = current_time - last_torque_calc_time;
+  last_torque_calc_time = current_time;
+
+  if (dt_ms == 0) {
+	  // In case this function runs twice within the same milisecond.
+	  // requestedTorque retains old value!
+	  return;
+  }
+
+  float dt = dt_ms/1000.0f;
+  float alpha = dt / (RC_TIME_CONSTANT + dt);
+
+  filtered_target_torque = (targetTorque * alpha) + (filtered_target_torque * (1.0f - alpha));
+  float max_step = SLEW_RATE_LIMIT*dt;
+
+  if (filtered_target_torque > requestedTorque + max_step) {
+	  requestedTorque += max_step;
+  } else if (filtered_target_torque < requestedTorque - max_step) {
+	  requestedTorque -= max_step;
+  } else {
+	  requestedTorque = filtered_target_torque;
   }
 }
 
@@ -169,8 +226,22 @@ void checkAPPS_BSE_Crosscheck() {
   }
 }
 
-static HAL_StatusTypeDef TR_CAN_Debug;
-static int torque_requests_sent;
+// ----------------------
+// CAN TX AND RX
+// ----------------------
+
+void configureInverterMessage() {
+  Inverter_TxHeader.Identifier = INVERTER_TORQUE_REQUEST_TX_ID;
+  Inverter_TxHeader.IdType = FDCAN_STANDARD_ID;
+  Inverter_TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+  Inverter_TxHeader.DataLength = FDCAN_DLC_BYTES_8;
+  Inverter_TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+  Inverter_TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+  Inverter_TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+  Inverter_TxHeader.TxEventFifoControl = FDCAN_STORE_TX_EVENTS;
+  Inverter_TxHeader.MessageMarker = 0;
+}
+
 void sendTorqueRequest(uint16_t requestedTorque_i, uint8_t forward,
                        uint8_t inverter_on) {
   uint8_t msg0 = (uint8_t)(requestedTorque_i & 0xFF);
@@ -185,9 +256,7 @@ void sendTorqueRequest(uint16_t requestedTorque_i, uint8_t forward,
   Inverter_TxData[6] = 0;           // Default Torque Limits in EEPROM
   Inverter_TxData[7] = 0;           // Default Torque Limits in EEPROM
 
-  TR_CAN_Debug = HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader,
-                                               Inverter_TxData);
-  torque_requests_sent++;
+  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &Inverter_TxHeader, Inverter_TxData);
 }
 
 void processInverter_Voltage() {
@@ -196,10 +265,11 @@ void processInverter_Voltage() {
 }
 
 void processInverter_RPM() {
-  inverter_diagnostics.inverter_rpm =
-      (float)((int16_t)(RxData1[2] | (RxData1[3] << 8)));
-  inverter_diagnostics.inverter_carspeed =
-      (float)(inverter_diagnostics.inverter_rpm) * RPM_TO_CARSPEED_CONVFACTOR;
+  inverter_diagnostics.inverter_rpm = fabsf(
+		  (float)((int16_t)(RxData1[2] | (RxData1[3] << 8))));
+  inverter_diagnostics.inverter_carspeed = fabsf(
+		  (float)(inverter_diagnostics.inverter_rpm)
+		  * RPM_TO_CARSPEED_CONVFACTOR);
 }
 
 void resetPlausibilityChecks() {

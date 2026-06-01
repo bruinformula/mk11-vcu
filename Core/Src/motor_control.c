@@ -44,24 +44,70 @@ void calculateTorqueRequest() {
 		apps_percent_average = pedal_percents[1];
 #endif
 
+	float targetTorque = 0.0f;
   if (apps_percent_average >= APPS_INFLECTION_PERCENT) {
-    requestedTorque = ((float)(MAX_TORQUE - MIN_TORQUE)) *
+    targetTorque = ((float)(MAX_TORQUE - MIN_TORQUE)) *
                       (apps_percent_average - APPS_INFLECTION_PERCENT);
 
-    if (requestedTorque >= MAX_TORQUE) {
-      requestedTorque = MAX_TORQUE;
+    if (targetTorque >= MAX_TORQUE) {
+      targetTorque = MAX_TORQUE;
+    }
+
+    // --- 73 kW Power Limit ---
+    // Mechanical Power = Torque * RPM * (2 * pi / 60)
+    // Max Allowable Torque = 73,000 Watts / (RPM * 0.104719755)
+    float current_rpm = fabsf(inverter_diagnostics.inverter_rpm);
+    if (current_rpm > 100.0f) { // Prevent division by zero
+        float max_power_torque = 73000.0f / (current_rpm * 0.104719755f);
+        if (targetTorque > max_power_torque) {
+            targetTorque = max_power_torque;
+        }
     }
   } else {
     // Cancel regen if speed is low, or if the brake pedal is pressed (>5%).
     // Commanding regen while the mechanical brakes lock the wheels causes massive phase currents and trips the inverter.
     if (inverter_diagnostics.inverter_carspeed < 5.0f || pedal_percents[2] > 0.05f) {
-      requestedTorque = 0;
+      targetTorque = 0;
     } else {
       // Calculate normal regen torque based on pedal position
-      requestedTorque = (REGEN_MAX_TORQUE - REGEN_BASELINE_TORQUE) *
+      targetTorque = (REGEN_MAX_TORQUE - REGEN_BASELINE_TORQUE) *
                         ((APPS_INFLECTION_PERCENT - apps_percent_average) /
                          APPS_INFLECTION_PERCENT);
     }
+  }
+
+  // --- Software Pedal Filter & Slew Rate Limiter ---
+  // 1. Low-Pass Filter eliminates high-frequency ADC noise (jitter/stuttering)
+  // 2. Slew Rate Limiter safely ramps massive torque drops (120Nm -> 0Nm)
+  
+  static uint32_t last_torque_calc_time = 0;
+  uint32_t current_time = HAL_GetTick();
+  uint32_t dt_ms = current_time - last_torque_calc_time;
+  
+  if (dt_ms > 0) {
+      float dt = dt_ms / 1000.0f; // Time delta in seconds
+      last_torque_calc_time = current_time;
+
+      // Low Pass Filter (RC time constant tau = 0.05 seconds)
+      float tau = 0.05f;
+      float alpha = dt / (tau + dt);
+      
+      static float filteredTargetTorque = 0.0f;
+      // Initialize filter on startup
+      if (dt > 1.0f) filteredTargetTorque = targetTorque;
+      
+      filteredTargetTorque = (targetTorque * alpha) + (filteredTargetTorque * (1.0f - alpha));
+
+      // Slew rate limit: 2000 Nm/sec (drops 120 Nm to 0 in 60ms)
+      float max_step = 2000.0f * dt;
+
+      if (filteredTargetTorque > requestedTorque + max_step) {
+          requestedTorque += max_step;
+      } else if (filteredTargetTorque < requestedTorque - max_step) {
+          requestedTorque -= max_step;
+      } else {
+          requestedTorque = filteredTargetTorque;
+      }
   }
 }
 

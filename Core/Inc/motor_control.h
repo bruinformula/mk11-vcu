@@ -19,10 +19,10 @@
 #define ONLY_APPS2 2
 #define PEDAL_MODE ONLY_APPS2
 
-#define APPS1_ADC_MAX_VAL 320
+#define APPS1_ADC_MAX_VAL 380
 #define APPS1_ADC_MIN_VAL 1450
 
-#define APPS2_ADC_MAX_VAL 540
+#define APPS2_ADC_MAX_VAL 590
 #define APPS2_ADC_MIN_VAL 1950
 
 #define BSE_ADC_MAX_VAL 1300
@@ -40,7 +40,7 @@
 
 #define RPM_TO_CARSPEED_CONVFACTOR                                             \
   (59.0f * 32.0f * 3.14159f * 60.0f) / (12.0f * 39370.1f)
-#define MAX_TORQUE 120
+#define MAX_TORQUE 150
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30

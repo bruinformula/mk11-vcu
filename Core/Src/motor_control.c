@@ -52,17 +52,6 @@ void calculateTorqueRequest() {
     if (targetTorque >= MAX_TORQUE) {
       targetTorque = MAX_TORQUE;
     }
-
-    // --- 73 kW Power Limit ---
-    // Mechanical Power = Torque * RPM * (2 * pi / 60)
-    // Max Allowable Torque = 73,000 Watts / (RPM * 0.104719755)
-    float current_rpm = fabsf(inverter_diagnostics.inverter_rpm);
-    if (current_rpm > 100.0f) { // Prevent division by zero
-        float max_power_torque = 73000.0f / (current_rpm * 0.104719755f);
-        if (targetTorque > max_power_torque) {
-            targetTorque = max_power_torque;
-        }
-    }
   } else {
     // Cancel regen if speed is low, or if the brake pedal is pressed (>5%).
     // Commanding regen while the mechanical brakes lock the wheels causes massive phase currents and trips the inverter.

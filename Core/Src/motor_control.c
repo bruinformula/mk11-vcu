@@ -50,22 +50,6 @@ void calculateTorqueRequest() {
 	 if (targetTorque <= MIN_TORQUE) {
 		 targetTorque = MIN_TORQUE;
 	 }
-
-	 // HIGH RPM TORQUE DERATER
-	 // 73 kW Power Limit; FSAE Rules establishes 80 kW Power Limit, so 73 kW is a safe cutoff.
-	 // Power = Torque * Angular Velocity
-	 // Angular Velocity = RPM * 2 * PI / 60
-
-	 if (inverter_diagnostics.inverter_rpm > 100.0f) {
-		 float max_power_limited_torque =
-				 INVERTER_POWER_LIMIT_W /
-				 (inverter_diagnostics.inverter_rpm *
-				 TWO_PI_OVER_60);
-
-		 if (targetTorque > max_power_limited_torque) {
-			 targetTorque = max_power_limited_torque;
-		 }
-	 }
   } else {
 	  // REGEN REGION
 
@@ -125,25 +109,26 @@ void validateAPPS() {
 // 1. APPS1 or APPS2 are plugged in and not pressed; ADC Value will be larger than ADC_MIN_VAL.
 // 2. APPS1 or APPS2 are plugged in and pressed beyond intended range of motion; ADC Value will be smaller than ADC_MAX_VAL.
 // 3. APPS1 or APPS2 are unplugged and raw ADC value is ~ 70; this is smaller than ADC_MAX_VAL.
+#define APPS_OVERSHOOT_BUFFER 250
 
 #if PEDAL_MODE == TWO_APPS
 
-    plausibility_checks.apps1_invalid = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
-    		(ADC_VAL[0] < APPS1_ADC_MAX_VAL);
-    plausibility_checks.apps2_invalid = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
-        (ADC_VAL[1] < APPS2_ADC_MAX_VAL);
+    plausibility_checks.apps1_invalid = (ADC_VAL[0] > (APPS1_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
+    		(ADC_VAL[0] < (APPS1_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
+    plausibility_checks.apps2_invalid = (ADC_VAL[1] > (APPS2_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
+        (ADC_VAL[1] < (APPS2_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
 
 #elif PEDAL_MODE == ONLY_APPS1
 
-    plausibility_checks.apps1_invalid = (ADC_VAL[0] > APPS1_ADC_MIN_VAL) ||
-        (ADC_VAL[0] < APPS1_ADC_MAX_VAL);
+    plausibility_checks.apps1_invalid = (ADC_VAL[0] > (APPS1_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
+        (ADC_VAL[0] < (APPS1_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
     plausibility_checks.apps2_invalid = false;
 
 #elif PEDAL_MODE == ONLY_APPS2
 
     plausibility_checks.apps1_invalid = false;
-    plausibility_checks.apps2_invalid = (ADC_VAL[1] > APPS2_ADC_MIN_VAL) ||
-        (ADC_VAL[1] < APPS2_ADC_MAX_VAL);
+    plausibility_checks.apps2_invalid = (ADC_VAL[1] > (APPS2_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
+        (ADC_VAL[1] < (APPS2_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
 
 #endif
 

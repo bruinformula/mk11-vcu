@@ -45,7 +45,7 @@
 #define RC_TIME_CONSTANT 0.05f // Tau, RC Time Constant for digital LPF
 #define SLEW_RATE_LIMIT 2000.0f // 2000 Nm/s, drops 120 Nm to 0 Nm in ~60 ms
 
-#define MAX_TORQUE 150
+#define MAX_TORQUE 120
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30

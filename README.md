@@ -1,6 +1,6 @@
 # Mk.11 VCU Firmware
 
-Firmware for the MK. 111 vehicle control unit, running on an STM32 H723ZGT microcontroller.
+Firmware for the Mk.11 vehicle control unit, running on an STM32 H723ZGT microcontroller.
 
 ## Overview
 

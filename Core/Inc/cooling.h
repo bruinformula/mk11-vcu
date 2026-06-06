@@ -25,14 +25,14 @@ typedef union COOLING_CMD_DF {
 	uint8_t array[8];
 } COOLING_CMD_DF;
 
-#define IDLE_TRACTIVE_FAN_PWM 20
+#define IDLE_TRACTIVE_FAN_PWM 45
 #define IDLE_TRACTIVE_PUMP_PWM 50
-#define IDLE_ACCY_FAN_PWM 20
+#define IDLE_ACCY_FAN_PWM 35
 
 #define INVERTER_TEMP_THRESHOLD_L 20
-#define INVERTER_TEMP_THRESHOLD_H 80
+#define INVERTER_TEMP_THRESHOLD_H 50
 #define BMS_TEMP_THRESHOLD_L 20
-#define BMS_TEMP_THRESHOLD_H 60
+#define BMS_TEMP_THRESHOLD_H 55
 
 void configureCoolingCmdMsg();
 void processBMS_Temp();

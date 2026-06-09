@@ -71,7 +71,7 @@ void calculateAccyFanPWM(float bms_temp) {
 	}
 
 	if (bms_temp > BMS_TEMP_THRESHOLD_H) {
-		last_accy_fan_pwm = 100;
+		last_accy_fan_pwm = 75;
 	} else if (bms_temp < BMS_TEMP_THRESHOLD_L) {
 		last_accy_fan_pwm = 0;
 	} else {

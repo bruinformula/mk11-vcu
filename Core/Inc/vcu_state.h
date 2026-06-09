@@ -18,9 +18,6 @@ typedef enum {
 	VCU_IDLE = 0,
 	VCU_PRECHARGED,
 	VCU_DRIVE,
-	VCU_IMD_FAULT,
-	VCU_BMS_FAULT,
-	VCU_BSPD_FAULT,
 	VCU_CAN_FAULT
 } VCU_STATE;
 extern volatile VCU_STATE vcu_state;

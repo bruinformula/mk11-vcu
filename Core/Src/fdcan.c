@@ -281,7 +281,7 @@ void FDCAN1_Rx_Handler(void) {
     break;
 
   case SHUTDOWN_POWER_LOST_RX_ID:
-	resetVCU();
+	// Ignored to prevent noise-induced lockout. Using Inverter Voltage as source of truth instead.
 	break;
 
   case INVERTER_VOLTAGE_RX_ID:

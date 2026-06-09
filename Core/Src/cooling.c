@@ -10,9 +10,9 @@
 static COOLING_CMD_DF cooling_cmd_df;
 static FDCAN_TxHeaderTypeDef CoolingCmd_TxHeader;
 
-static uint8_t last_tractive_fan_pwm;
-static uint8_t last_tractive_pump_pwm;
-static uint8_t last_accy_fan_pwm;
+static uint8_t last_tractive_fan_pwm = IDLE_TRACTIVE_FAN_PWM;
+static uint8_t last_tractive_pump_pwm = IDLE_TRACTIVE_PUMP_PWM;
+static uint8_t last_accy_fan_pwm = IDLE_ACCY_FAN_PWM;
 
 static float bms_avg_temp;
 static float phase_a_temp;
@@ -65,19 +65,19 @@ void calculateTractivePumpPWM(float inverter_temp) {
 }
 
 void calculateAccyFanPWM(float bms_temp) {
-	if (vcu_state != VCU_DRIVE) {
-		last_accy_fan_pwm = IDLE_ACCY_FAN_PWM;
-		return;
-	}
+    if (vcu_state != VCU_DRIVE) {
+        last_accy_fan_pwm = IDLE_ACCY_FAN_PWM;
+        return;
+    }
 
-	if (bms_temp > BMS_TEMP_THRESHOLD_H) {
-		last_accy_fan_pwm = 75;
-	} else if (bms_temp < BMS_TEMP_THRESHOLD_L) {
-		last_accy_fan_pwm = 0;
-	} else {
-		last_accy_fan_pwm = (int) (( (bms_temp - BMS_TEMP_THRESHOLD_L) /
-				(BMS_TEMP_THRESHOLD_H - BMS_TEMP_THRESHOLD_L))*100);
-	}
+    if (bms_temp >= BMS_TEMP_THRESHOLD_H) {
+        last_accy_fan_pwm = 75;
+    } else if (bms_temp <= BMS_TEMP_THRESHOLD_L) {
+        last_accy_fan_pwm = 0;
+    } else {
+        last_accy_fan_pwm = (int)( (  (bms_temp - BMS_TEMP_THRESHOLD_L) /
+                       (BMS_TEMP_THRESHOLD_H - BMS_TEMP_THRESHOLD_L))*75);
+    }
 }
 
 void processBMS_Temp() {
@@ -95,16 +95,17 @@ void processInverter_Temp() {
 	calculateTractivePumpPWM(inv_avg_temp);
 }
 
-static uint32_t last_send_time = 0;
+static uint32_t last_cooling_cmd_send = 0;
 void sendCoolingCmd() {
-	if (HAL_GetTick() - last_send_time < 500) return;
+	if (HAL_GetTick() - last_cooling_cmd_send < COOLING_CMD_RATE_LIMIT_MS) return; // 2 Hz Rate Limit
 
 	cooling_cmd_df.data.cooling_en = 1;
     cooling_cmd_df.data.tractive_fan_pwm = last_tractive_fan_pwm;
     cooling_cmd_df.data.tractive_pump_pwm = last_tractive_pump_pwm;
     cooling_cmd_df.data.accy_fan_pwm = last_accy_fan_pwm;
 
-    HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1,
-        &CoolingCmd_TxHeader, cooling_cmd_df.array);
-    last_send_time = HAL_GetTick();
+    if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
+    	HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &CoolingCmd_TxHeader, cooling_cmd_df.array);
+    	last_cooling_cmd_send = HAL_GetTick();
+    }
 }

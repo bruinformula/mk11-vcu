@@ -1,1 +1,3 @@
 ../Core/Src/vcu_state.c:14:6:resetVCU	3
+../Core/Src/vcu_state.c:42:6:configureVCUDiagnosticsMessage	1
+../Core/Src/vcu_state.c:55:6:sendVCUDiagnostics	3

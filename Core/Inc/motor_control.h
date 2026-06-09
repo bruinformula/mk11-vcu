@@ -28,30 +28,28 @@
 #define BSE_ADC_MAX_VAL 4200
 #define BSE_ADC_MIN_VAL 380
 
-
-#define APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.10
+#define APPS_OVERSHOOT_BUFFER 250
+#define APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.10f
 #define APPS_IMPLAUSIBILITY_TIMEOUT_MS 100
-#define APPS_INFLECTION_PERCENT 0.05
+#define APPS_INFLECTION_PERCENT 0.05f
 
 #define BSE_IMPLAUSIBILITY_TIMEOUT_MS 100
 #define BSE_ACTIVATED_ADC_THRESHOLD 900
 
-#define CROSSCHECK_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.25
-#define CROSSCHECK_RESTORATION_APPS_PERCENT 0.05
+#define CROSSCHECK_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.25f
+#define CROSSCHECK_RESTORATION_APPS_PERCENT 0.05f
 
 #define RPM_TO_CARSPEED_CONVFACTOR                                             \
   (59.0f * 32.0f * 3.14159f * 60.0f) / (12.0f * 39370.1f) // Based on Tire Measurements
-#define INVERTER_POWER_LIMIT_W 73000.0f // 73 kW Power Limit
-#define VCU_DIAGNOSTICS_TX_ID 0x500
 #define RC_TIME_CONSTANT 0.05f // Tau, RC Time Constant for digital LPF
-#define SLEW_RATE_LIMIT 500.0f // 1000 Nm/s, fast punchy acceleration now that PI is stable
+#define SLEW_RATE_LIMIT 500.0f // 500 Nm/s, fast punchy acceleration now that PI is stable
 
 #define MAX_TORQUE 115
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30
 
-extern uint16_t ADC_VAL[3];
+extern volatile uint16_t ADC_VAL[3];
 extern float voltage_values[3];
 extern float pedal_percents[3];
 extern float requestedTorque;
@@ -60,7 +58,6 @@ typedef struct PlausibilityChecks {
   bool apps1_invalid;
   bool apps2_invalid;
   bool apps_plausible;
-  bool bse_plausible;
   bool crosscheck_plausible;
 } PlausibilityChecks;
 extern PlausibilityChecks plausibility_checks;
@@ -70,17 +67,16 @@ typedef struct InverterDiagnostics {
   float inverter_voltage;
   float inverter_carspeed;
 } InverterDiagnostics;
+extern InverterDiagnostics inverter_diagnostics;
 
+void resetTorqueFilter();
 void calculateTorqueRequest();
 void validateAPPS();
 void checkAPPS_Plausibility();
-void checkBSE_Plausibility();
 void checkAPPS_BSE_Crosscheck();
 void configureInverterMessage();
-void configureVCUDiagnosticsMessage();
 void sendTorqueRequest(uint16_t requestedTorque, uint8_t forward,
                        uint8_t inverter_on);
-void sendVCUDiagnostics();
 void processInverter_Voltage();
 void processInverter_RPM();
 void resetPlausibilityChecks();

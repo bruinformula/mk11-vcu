@@ -24,6 +24,11 @@ extern volatile VCU_STATE vcu_state;
 extern volatile bool rtd_button_pressed;
 extern volatile bool prchg_button_pressed;
 
+#define VCU_DIAGNOSTICS_TX_ID 0x500
+#define VCU_DIAG_RATE_LIMIT_MS 50
+
 void resetVCU();
+void configureVCUDiagnosticsMessage();
+void sendVCUDiagnostics();
 
 #endif /* INC_VCU_STATE_H_ */

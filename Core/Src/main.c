@@ -48,31 +48,32 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define INVERTER_RATE_LIMIT_MS 10
 
 // RTD_SOUND_MODE == RTD_SOUND_NORMAL will attempt to play sound over I2S.
 // RTD_SOUND_MODE == RTD_SOUND_OVERRIDE will assume successful speaker playback.
 #define RTD_SOUND_NORMAL 0
 #define RTD_SOUND_OVERRIDE 1
 #define RTD_SOUND_MODE RTD_SOUND_NORMAL
+
+#define INVERTER_LOCKOUT_TIME_MS 150
+#define INVERTER_RATE_LIMIT_MS 10
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int fdcan1_debug_cb = 0;
-int fdcan2_debug_cb = 0;
+volatile uint32_t fdcan1_debug_cb = 0;
+volatile uint32_t fdcan2_debug_cb = 0;
 
 volatile uint32_t fdcan_rx_count = 0;          /* Counter for received messages */
 volatile uint32_t fdcan_tx_count = 0;          /* Counter for transmitted messages */
 volatile uint32_t fdcan_rx_error_count = 0;    /* RX error counter */
 
-
 volatile uint8_t rtd_debug;
 volatile uint8_t prchg_debug;
 
-volatile uint32_t inverter_tx_rate_limiter;
 volatile uint32_t inverter_lockout_start;
+volatile uint32_t inverter_tx_rate_limiter;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,20 +81,17 @@ void SystemClock_Config(void);
 static void MPU_Config(void);
 /* USER CODE BEGIN PFP */
 
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	voltage_values[0] = (ADC_VAL[0]/4095.0)*3.3; // CHANNEL 0: APPS1 (0 - 1.65V)
 	voltage_values[1] = (ADC_VAL[1]/4095.0)*3.3; // CHANNEL 6: APPS2 (0 - 2.24V)
 	voltage_values[2] = (ADC_VAL[2]/4095.0)*3.3; // CHANNEL 7: BSE (0 - 2.24V)
 
 	if (vcu_state != VCU_DRIVE) return;
-	if (HAL_GetTick() - inverter_lockout_start < 150) return;
+	if (HAL_GetTick() - inverter_lockout_start < INVERTER_LOCKOUT_TIME_MS) return;
 
 	pedal_percents[0] = ((float) ADC_VAL[0] - APPS1_ADC_MIN_VAL) / (APPS1_ADC_MAX_VAL - APPS1_ADC_MIN_VAL);
 	pedal_percents[1] = ((float) ADC_VAL[1] - APPS2_ADC_MIN_VAL) / (APPS2_ADC_MAX_VAL - APPS2_ADC_MIN_VAL);
@@ -101,12 +99,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 	validateAPPS();
 	checkAPPS_Plausibility();
-	checkBSE_Plausibility();
 	checkAPPS_BSE_Crosscheck();
 	calculateTorqueRequest();
 
-	if (vcu_state == VCU_DRIVE &&
-			HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 &&
+	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 &&
 			HAL_GetTick() - inverter_tx_rate_limiter > INVERTER_RATE_LIMIT_MS) {
 		sendTorqueRequest( (int)(requestedTorque*10), 0, 1);
 		inverter_tx_rate_limiter = HAL_GetTick();
@@ -114,7 +110,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-
 	if (GPIO_Pin == PRCHG_BTN_Pin) {
 		prchg_debug++;
 		if (HAL_GPIO_ReadPin(PRCHG_BTN_GPIO_Port, PRCHG_BTN_Pin) == GPIO_PIN_SET) {
@@ -182,9 +177,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         			return;
     			}
 
-    			for (int i = 0; i < 5; ++i) {
-    				// Inverter Lockout
-    				sendTorqueRequest(0, 1, 0);
+    			// INVERTER LOCKOUT FRAMES NECESSARY FOR START!
+    			for (uint8_t lockout_frames_sent = 0;
+    					lockout_frames_sent < 5 && HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0;
+    					++lockout_frames_sent) {
+    				sendTorqueRequest(0, 0, 0);
     			}
     			inverter_lockout_start = HAL_GetTick();
 
@@ -454,11 +451,11 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  for (uint8_t disable_frames_sent = 0;
-		  disable_frames_sent < 5 && HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0;
-		  ++disable_frames_sent) {
+	for (uint8_t lockout_frames_sent = 0;
+			lockout_frames_sent < 5 && HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0;
+			++lockout_frames_sent) {
 		sendTorqueRequest(0, 0, 0);
-  }
+	}
 
   HAL_I2S_DMAStop(&hi2s2);
   HAL_ADC_Stop_DMA(&hadc3);

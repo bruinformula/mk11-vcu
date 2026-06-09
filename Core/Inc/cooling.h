@@ -25,6 +25,8 @@ typedef union COOLING_CMD_DF {
 	uint8_t array[8];
 } COOLING_CMD_DF;
 
+#define COOLING_CMD_RATE_LIMIT_MS 500
+
 #define IDLE_TRACTIVE_FAN_PWM 10
 #define IDLE_TRACTIVE_PUMP_PWM 50
 #define IDLE_ACCY_FAN_PWM 10

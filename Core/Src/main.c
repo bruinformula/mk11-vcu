@@ -343,7 +343,6 @@ int main(void)
   while (1) {
 	  sendCoolingCmd();
 	  sendVCUDiagnostics();
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

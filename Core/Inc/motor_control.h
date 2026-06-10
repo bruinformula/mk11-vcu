@@ -44,7 +44,7 @@
 #define RC_TIME_CONSTANT 0.05f // Tau, RC Time Constant for digital LPF
 #define SLEW_RATE_LIMIT 500.0f // 500 Nm/s, fast punchy acceleration now that PI is stable
 
-#define MAX_TORQUE 115
+#define MAX_TORQUE 70
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30

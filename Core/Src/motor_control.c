@@ -141,7 +141,6 @@ void validateAPPS() {
 }
 
 void checkAPPS_Plausibility() {
-#if PEDAL_MODE == TWO_APPS
   float pedal_travel_difference_percent =
       fabsf(pedal_percents[0] - pedal_percents[1]);
   bool apps_invalid = (pedal_travel_difference_percent >
@@ -162,9 +161,6 @@ void checkAPPS_Plausibility() {
       plausibility_checks.apps_plausible = true;
     }
   }
-#else
-  plausibility_checks.apps_plausible = true;
-#endif
 }
 
 void checkAPPS_BSE_Crosscheck() {

@@ -17,7 +17,7 @@
 #define TWO_APPS 0
 #define ONLY_APPS1 1
 #define ONLY_APPS2 2
-#define PEDAL_MODE TWO_APPS
+#define PEDAL_MODE ONLY_APPS2
 
 #define APPS1_ADC_MAX_VAL 295
 #define APPS1_ADC_MIN_VAL 1280
@@ -42,9 +42,9 @@
 #define RPM_TO_CARSPEED_CONVFACTOR                                             \
   (59.0f * 32.0f * 3.14159f * 60.0f) / (12.0f * 39370.1f) // Based on Tire Measurements
 #define RC_TIME_CONSTANT 0.05f // Tau, RC Time Constant for digital LPF
-#define SLEW_RATE_LIMIT 500.0f // 500 Nm/s, fast punchy acceleration now that PI is stable
+#define SLEW_RATE_LIMIT 2000.0f // 500 Nm/s, fast punchy acceleration now that PI is stable
 
-#define MAX_TORQUE 70
+#define MAX_TORQUE 140
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30

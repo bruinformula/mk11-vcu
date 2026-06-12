@@ -1,7 +1,7 @@
 ../Core/Src/motor_control.c:30:6:resetTorqueFilter	1
 ../Core/Src/motor_control.c:35:6:calculateTorqueRequest	16
-../Core/Src/motor_control.c:127:6:validateAPPS	5
-../Core/Src/motor_control.c:159:6:checkAPPS_Plausibility	5
+../Core/Src/motor_control.c:127:6:validateAPPS	3
+../Core/Src/motor_control.c:159:6:checkAPPS_Plausibility	1
 ../Core/Src/motor_control.c:186:6:checkAPPS_BSE_Crosscheck	6
 ../Core/Src/motor_control.c:216:6:configureInverterMessage	1
 ../Core/Src/motor_control.c:228:6:sendTorqueRequest	1

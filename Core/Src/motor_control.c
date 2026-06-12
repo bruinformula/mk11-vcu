@@ -132,26 +132,10 @@ void validateAPPS() {
 // 3. APPS1 or APPS2 are unplugged and raw ADC value is ~ 70; this is smaller than ADC_MAX_VAL.
 #define APPS_OVERSHOOT_BUFFER 250
 
-#if PEDAL_MODE == TWO_APPS
-
     plausibility_checks.apps1_invalid = (ADC_VAL[0] > (APPS1_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
     		(ADC_VAL[0] < (APPS1_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
     plausibility_checks.apps2_invalid = (ADC_VAL[1] > (APPS2_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
         (ADC_VAL[1] < (APPS2_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
-
-#elif PEDAL_MODE == ONLY_APPS1
-
-    plausibility_checks.apps1_invalid = (ADC_VAL[0] > (APPS1_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
-        (ADC_VAL[0] < (APPS1_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
-    plausibility_checks.apps2_invalid = false;
-
-#elif PEDAL_MODE == ONLY_APPS2
-
-    plausibility_checks.apps1_invalid = false;
-    plausibility_checks.apps2_invalid = (ADC_VAL[1] > (APPS2_ADC_MIN_VAL + APPS_OVERSHOOT_BUFFER)) ||
-        (ADC_VAL[1] < (APPS2_ADC_MAX_VAL - APPS_OVERSHOOT_BUFFER));
-
-#endif
 
     // Torque cut handled in calculateTorqueRequest().
 }

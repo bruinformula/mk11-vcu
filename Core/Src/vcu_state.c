@@ -15,7 +15,9 @@ void resetVCU() {
 	HAL_TIM_Base_Stop_IT(&htim1);
 	HAL_TIM_Base_Stop_IT(&htim2);
 	HAL_TIM_Base_Stop_IT(&htim3);
+
 	HAL_ADC_Stop_DMA(&hadc3);
+	HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Disable RTD + PRCHG Buttons
 
 	precharge_state = PRECHARGE_IDLE;
 	precharge_response_received = false;

@@ -336,6 +336,9 @@ int main(void)
 
   HAL_ADCEx_Calibration_Start(&hadc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
   HAL_ADC_Start_DMA(&hadc3, (uint32_t*) ADC_VAL, 3);
+
+  // ISHAN CHITALE - BRUIN FORMULA RACING SOFTWARE LEAD, 2025-2026
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

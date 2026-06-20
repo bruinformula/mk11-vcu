@@ -19,11 +19,11 @@
 #define ONLY_APPS2 2
 #define PEDAL_MODE ONLY_APPS2
 
-#define APPS1_ADC_MAX_VAL 225
-#define APPS1_ADC_MIN_VAL 1375
+#define APPS1_ADC_MAX_VAL 320
+#define APPS1_ADC_MIN_VAL 1400
 
-#define APPS2_ADC_MAX_VAL 350
-#define APPS2_ADC_MIN_VAL 1875
+#define APPS2_ADC_MAX_VAL 470
+#define APPS2_ADC_MIN_VAL 1965
 
 #define BSE_ADC_MAX_VAL 1500
 #define BSE_ADC_MIN_VAL 375
@@ -44,7 +44,7 @@
 #define RC_TIME_CONSTANT 0.05f // Tau, RC Time Constant for digital LPF
 #define SLEW_RATE_LIMIT 2000.0f // Adjust according to event
 
-#define MAX_TORQUE 70 // Adjust according to event
+#define MAX_TORQUE 80 // Adjust according to event
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30

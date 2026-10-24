@@ -7,6 +7,7 @@
 
 #include "motor_control.h"
 #include "vcu_state.h"
+#include <math.h>
 
 volatile uint16_t ADC_VAL[3];
 float voltage_values[3];
@@ -26,6 +27,8 @@ static uint8_t Inverter_TxData[8];
 
 static float filtered_target_torque = 0.0f;
 static uint32_t last_torque_calc_time = 0;
+static uint32_t last_rpm_rx_time = 0;
+static bool rpm_received = false;
 
 void resetTorqueFilter() {
 	filtered_target_torque = 0.0f;
@@ -62,9 +65,13 @@ void calculateTorqueRequest() {
 	  targetTorque = 0.0f;
   } else if (apps_percent_average >= APPS_INFLECTION_PERCENT) {
 	  // POSITIVE TORQUE REGION
-	  targetTorque = (MAX_TORQUE - MIN_TORQUE) *
-	      ((apps_percent_average - APPS_INFLECTION_PERCENT) /
-	       (1.0f - APPS_INFLECTION_PERCENT));
+	  float pedal_fraction = (apps_percent_average - APPS_INFLECTION_PERCENT) /
+	                         (1.0f - APPS_INFLECTION_PERCENT);
+	  // Clamp before shaping so sensor overshoot cannot distort the curve.
+	  pedal_fraction = fminf(1.0f, fmaxf(0.0f, pedal_fraction));
+	  float shaped_fraction = (1.0f - APPS_TORQUE_CURVE_BLEND) * pedal_fraction +
+	                         APPS_TORQUE_CURVE_BLEND * pedal_fraction * pedal_fraction;
+	  targetTorque = MIN_TORQUE + (MAX_TORQUE - MIN_TORQUE) * shaped_fraction;
 
 	 // GENERAL TORQUE CLAMPING
 	 if (targetTorque >= MAX_TORQUE) {
@@ -122,6 +129,24 @@ void calculateTorqueRequest() {
   } else {
 	  requestedTorque = filtered_target_torque;
   }
+}
+
+float getLimitedTorqueRequest() {
+  // Preserve regen; this envelope limits positive drive torque only.
+  if (requestedTorque <= 0.0f) return requestedTorque;
+  float rpm = inverter_diagnostics.inverter_rpm;
+  if (!rpm_received || !isfinite(rpm) || rpm < 0.0f ||
+      HAL_GetTick() - last_rpm_rx_time > INVERTER_RPM_TIMEOUT_MS) {
+    return 0.0f;
+  }
+
+  float torque_limit = MAX_TORQUE;
+  float angular_speed = rpm * (2.0f * 3.14159265358979323846f / 60.0f);
+  if (angular_speed > 0.0f) {
+    torque_limit = fminf(torque_limit, MAX_MECHANICAL_POWER_W / angular_speed);
+  }
+  // Apply after filtering: a falling RPM-based ceiling must take effect immediately.
+  return fminf(requestedTorque, torque_limit);
 }
 
 void validateAPPS() {
@@ -228,6 +253,8 @@ void processInverter_Voltage() {
 void processInverter_RPM() {
   inverter_diagnostics.inverter_rpm = fabsf(
 		  (float)((int16_t)(RxData1[2] | (RxData1[3] << 8))));
+  last_rpm_rx_time = HAL_GetTick();
+  rpm_received = true;
   inverter_diagnostics.inverter_carspeed = fabsf(
 		  (float)(inverter_diagnostics.inverter_rpm)
 		  * RPM_TO_CARSPEED_CONVFACTOR);

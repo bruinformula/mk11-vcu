@@ -104,7 +104,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
 	if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0 &&
 			HAL_GetTick() - inverter_tx_rate_limiter > INVERTER_RATE_LIMIT_MS) {
-		sendTorqueRequest( (int)(requestedTorque*10), 0, 1);
+		sendTorqueRequest( (int)(getLimitedTorqueRequest()*10), 0, 1);
 		inverter_tx_rate_limiter = HAL_GetTick();
 	}
 }

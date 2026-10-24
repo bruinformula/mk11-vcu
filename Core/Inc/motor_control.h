@@ -32,6 +32,9 @@
 #define APPS_IMPLAUSIBILITY_PERCENT_DIFFERENCE 0.10f
 #define APPS_IMPLAUSIBILITY_TIMEOUT_MS 100
 #define APPS_INFLECTION_PERCENT 0.05f
+// Blend linear (0.0f) and quadratic (1.0f) accelerator response; use [0, 1].
+// Higher values provide finer control at low pedal travel.
+#define APPS_TORQUE_CURVE_BLEND 1.0f
 
 #define BSE_IMPLAUSIBILITY_TIMEOUT_MS 100
 #define BSE_ACTIVATED_ADC_THRESHOLD 1000
@@ -44,7 +47,10 @@
 #define RC_TIME_CONSTANT 0.05f // Tau, RC Time Constant for digital LPF
 #define SLEW_RATE_LIMIT 2000.0f // Adjust according to event
 
-#define MAX_TORQUE 80 // Adjust according to event
+#define MAX_TORQUE 210.0f // Motor torque ceiling, N*m
+// Mechanical request envelope only; does not enforce accumulator power.
+#define MAX_MECHANICAL_POWER_W 80000.0f
+#define INVERTER_RPM_TIMEOUT_MS 100U
 #define MIN_TORQUE 0
 #define REGEN_BASELINE_TORQUE 0
 #define REGEN_MAX_TORQUE -30
@@ -71,6 +77,7 @@ extern InverterDiagnostics inverter_diagnostics;
 
 void resetTorqueFilter();
 void calculateTorqueRequest();
+float getLimitedTorqueRequest();
 void validateAPPS();
 void checkAPPS_Plausibility();
 void checkAPPS_BSE_Crosscheck();

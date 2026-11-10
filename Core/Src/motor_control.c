@@ -29,8 +29,14 @@ static float filtered_target_torque = 0.0f;
 static uint32_t last_torque_calc_time = 0;
 static uint32_t last_rpm_rx_time = 0;
 static bool rpm_received = false;
+#if INVERTER_TUNING_STEP_MODE
+static bool tuning_high_step = false;
+#endif
 
 void resetTorqueFilter() {
+#if INVERTER_TUNING_STEP_MODE
+	tuning_high_step = false;
+#endif
 	filtered_target_torque = 0.0f;
 	last_torque_calc_time = 0;
 }
@@ -61,15 +67,24 @@ void calculateTorqueRequest() {
   }
 
 #if INVERTER_TUNING_STEP_MODE
-  // Bypass VCU shaping for a 0-to-100 N*m CAN command step; never request regen.
+  // Secured dyno test: bypass VCU shaping for 0/100/150 N*m steps; no regen.
   // Brake application or a plausibility fault cancels the step immediately.
   if (!safety_torque_cut && isfinite(apps_percent_average) &&
       apps_percent_average > INVERTER_TUNING_PEDAL_THRESHOLD &&
       ADC_VAL[2] <= BSE_ACTIVATED_ADC_THRESHOLD &&
       pedal_percents[2] <= 0.05f) {
-    targetTorque = fminf(INVERTER_TUNING_STEP_TORQUE_NM, MAX_TORQUE);
+    if (apps_percent_average > INVERTER_TUNING_HIGH_PEDAL_ON) {
+      tuning_high_step = true;
+    } else if (apps_percent_average < INVERTER_TUNING_HIGH_PEDAL_OFF) {
+      tuning_high_step = false;
+    }
+    targetTorque = fminf(tuning_high_step ? INVERTER_TUNING_HIGH_TORQUE_NM :
+                        INVERTER_TUNING_STEP_TORQUE_NM, MAX_TORQUE);
+  } else {
+    tuning_high_step = false;
   }
-  resetTorqueFilter();
+  filtered_target_torque = 0.0f;
+  last_torque_calc_time = 0;
   requestedTorque = targetTorque;
   return;
 #endif

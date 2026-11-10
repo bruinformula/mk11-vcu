@@ -36,6 +36,11 @@
 // Higher values provide finer control at low pedal travel.
 #define APPS_TORQUE_CURVE_BLEND 1.0f
 
+// Secured dyno step-response test only. Set to 0 for normal pedal mapping.
+#define INVERTER_TUNING_STEP_MODE 1
+#define INVERTER_TUNING_STEP_TORQUE_NM 100.0f
+#define INVERTER_TUNING_PEDAL_THRESHOLD 0.05f
+
 #define BSE_IMPLAUSIBILITY_TIMEOUT_MS 100
 #define BSE_ACTIVATED_ADC_THRESHOLD 1000
 

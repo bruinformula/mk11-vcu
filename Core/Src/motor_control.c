@@ -60,6 +60,20 @@ void calculateTorqueRequest() {
   		safety_torque_cut = true;
   }
 
+#if INVERTER_TUNING_STEP_MODE
+  // Bypass VCU shaping for a 0-to-100 N*m CAN command step; never request regen.
+  // Brake application or a plausibility fault cancels the step immediately.
+  if (!safety_torque_cut && isfinite(apps_percent_average) &&
+      apps_percent_average > INVERTER_TUNING_PEDAL_THRESHOLD &&
+      ADC_VAL[2] <= BSE_ACTIVATED_ADC_THRESHOLD &&
+      pedal_percents[2] <= 0.05f) {
+    targetTorque = fminf(INVERTER_TUNING_STEP_TORQUE_NM, MAX_TORQUE);
+  }
+  resetTorqueFilter();
+  requestedTorque = targetTorque;
+  return;
+#endif
+
   if (safety_torque_cut) {
 	  // PLAUSIBILITY CHECK FAILED!
 	  targetTorque = 0.0f;
